@@ -1,1 +1,3 @@
-pub mod matrix;
+pub mod objects;
+
+pub use objects::Matrix;

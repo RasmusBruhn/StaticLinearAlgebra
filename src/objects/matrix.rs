@@ -51,6 +51,30 @@ impl<T: Clone + Copy> Matrix<T> {
     pub fn unwrap(self) -> (Vec<T>, (usize, usize)) {
         (self.values, self.size)
     }
+
+    pub fn get_value(&self, row: usize, column: usize) -> T {
+        if row >= self.size.0 {
+            panic!("row {} is out of bound of width {}", row, self.size.0);
+        }
+
+        if column >= self.size.1 {
+            panic!("column {} is out of bound of height {}", column, self.size.1);
+        }
+
+        self.values[column + self.size.1 * row]
+    }
+
+    pub fn set_value(&mut self, value: T, row: usize, column: usize) {
+        if row >= self.size.0 {
+            panic!("row {} is out of bound of width {}", row, self.size.0);
+        }
+
+        if column >= self.size.1 {
+            panic!("column {} is out of bound of height {}", column, self.size.1);
+        }
+
+        self.values[column + self.size.1 * row] = value;
+    }
 }
 
 #[cfg(test)]
@@ -145,5 +169,53 @@ mod tests {
         fn unwrap() {
             let result = Matrix::from_array(&[0, 1, 2, 3, 4, 5], (2, 3));
             assert_eq!((vec![0, 1, 2, 3, 4, 5], (2, 3)), result.unwrap());
-        }    }
+        }
+
+        #[test]
+        fn get_value() {
+            let result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            assert_eq!(0, result.get_value(0, 0));
+            assert_eq!(1, result.get_value(0, 1));
+            assert_eq!(2, result.get_value(1, 0));
+            assert_eq!(3, result.get_value(1, 1));
+        }
+
+        #[test]
+        #[should_panic(expected = "is out of bound of width")]
+        fn get_value_panic_row() {
+            let result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            result.get_value(2, 0);
+        }
+
+        #[test]
+        #[should_panic(expected = "is out of bound of height")]
+        fn get_value_panic_column() {
+            let result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            result.get_value(0, 2);
+        }
+
+        #[test]
+        fn set_value() {
+            let mut result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            result.set_value(10, 0, 0);
+            result.set_value(11, 0, 1);
+            result.set_value(12, 1, 0);
+            result.set_value(13, 1, 1);
+            assert_eq!(vec![10, 11, 12, 13], result.to_vec());
+        }
+
+        #[test]
+        #[should_panic(expected = "is out of bound of width")]
+        fn set_value_panic_row() {
+            let mut result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            result.set_value(0, 2, 0);
+        }
+
+        #[test]
+        #[should_panic(expected = "is out of bound of height")]
+        fn set_value_panic_column() {
+            let mut result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            result.set_value(0, 0, 2);
+        }
+    }
 }
