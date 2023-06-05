@@ -4,7 +4,6 @@ use crate::operators;
 pub struct Matrix<T> 
 where
     T: Clone,
-    T: Copy,
     T: std::ops::Add<Output = T>,
     T: std::ops::Mul<Output = T>,
     T: std::iter::Sum,
@@ -16,7 +15,6 @@ where
 impl<T> Matrix<T>
 where
     T: Clone,
-    T: Copy,
     T: std::ops::Add<Output = T>,
     T: std::ops::Mul<Output = T>,
     T: std::iter::Sum,
@@ -41,12 +39,23 @@ where
         Self {values: values.to_vec(), size}
     }
 
-    pub fn from_diag(values: &[T], zero_value: T) -> Self {
+    pub fn from_diag_vec(values: Vec<T>, zero_value: T) -> Self {
         let size = values.len();
         let mut use_values: Vec<T> = vec![zero_value; size * size];
+        
+        for (n, value) in values.into_iter().enumerate() {
+            use_values[n * (size + 1)] = value;
+        }
 
+        Self {values: use_values, size: (size, size)}
+    }
+
+    pub fn from_diag_arr(values: &[T], zero_value: T) -> Self {
+        let size = values.len();
+        let mut use_values: Vec<T> = vec![zero_value; size * size];
+        
         for (n, value) in values.iter().enumerate() {
-            use_values[n * (size + 1)] = *value;
+            use_values[n * (size + 1)] = value.clone();
         }
 
         Self {values: use_values, size: (size, size)}
@@ -77,7 +86,7 @@ where
             panic!("column {} is out of bound of height {}", column, self.size.1);
         }
 
-        self.values[column + self.size.1 * row]
+        self.values[column + self.size.1 * row].clone()
     }
 
     pub fn set_value(&mut self, value: T, row: usize, column: usize) {
@@ -96,7 +105,6 @@ where
 impl<T> std::ops::Add for Matrix<T>
 where
     T: Clone,
-    T: Copy,
     T: std::ops::Add<Output = T>,
     T: std::ops::Mul<Output = T>,
     T: std::iter::Sum,
@@ -104,7 +112,7 @@ where
     type Output = Matrix<T>;
 
     fn add(self, rhs: Self) -> Self::Output {
-        operators::add::matrix(&self, &rhs).unwrap()
+        operators::add::matrix(self, rhs).unwrap()
     }
 }
 
@@ -163,16 +171,16 @@ mod tests {
         }
 
         #[test]
-        fn from_diag_int() {
-            let result = Matrix::from_diag(&[5, 2, 3], 0);
+        fn from_diag_vec() {
+            let result = Matrix::from_diag_vec(vec![5, 2, 3], 0);
             assert_eq!((3, 3), result.size);
             assert_eq!(9, result.values.len());
             assert_eq!(vec![5, 0, 0, 0, 2, 0, 0, 0, 3], result.values);
         }
 
         #[test]
-        fn from_diag_float() {
-            let result = Matrix::from_diag(&vec![2., 1.5, 0.1], 0.);
+        fn from_diag_arr() {
+            let result = Matrix::from_diag_arr(&[2., 1.5, 0.1], 0.);
             assert_eq!((3, 3), result.size);
             assert_eq!(9, result.values.len());
             assert_eq!(vec![2., 0., 0., 0., 1.5, 0., 0., 0., 0.1], result.values);

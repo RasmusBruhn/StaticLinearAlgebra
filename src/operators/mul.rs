@@ -5,7 +5,6 @@ use itertools::Itertools;
 pub fn matrix_matrix<T>(lhs: &Matrix<T>, rhs: &Matrix<T>) -> Result<Matrix<T>, LinAlgError>
     where
     T: Clone,
-    T: Copy,
     T: std::ops::Add<Output = T>,
     T: std::ops::Mul<Output = T>,
     T: std::iter::Sum,
@@ -17,7 +16,7 @@ pub fn matrix_matrix<T>(lhs: &Matrix<T>, rhs: &Matrix<T>) -> Result<Matrix<T>, L
     let size = (lhs.size.0, rhs.size.1);
     let values = (0..size.0).cartesian_product(0..size.1)
     .map(|(i, j)| (0..lhs.size.1)
-    .map(|k| lhs.values[k + i * lhs.size.1] * rhs.values[j + rhs.size.1 * k]).sum()).collect();
+    .map(|k| lhs.values[k + i * lhs.size.1].clone() * rhs.values[j + rhs.size.1 * k].clone()).sum()).collect();
     Ok(Matrix::from_vec(values, size))
 }
 
