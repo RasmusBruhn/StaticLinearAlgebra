@@ -1,10 +1,26 @@
+use crate::operators;
+
 #[derive(Debug, PartialEq)]
-pub struct Matrix<T: Clone + Copy> {
-    values: Vec<T>,
-    size: (usize, usize), 
+pub struct Matrix<T> 
+where
+    T: Clone,
+    T: Copy,
+    T: std::ops::Add<Output = T>,
+    T: std::ops::Mul<Output = T>,
+    T: std::iter::Sum,
+{
+    pub(crate) values: Vec<T>,
+    pub(crate) size: (usize, usize), 
 }
 
-impl<T: Clone + Copy> Matrix<T> {
+impl<T> Matrix<T>
+where
+    T: Clone,
+    T: Copy,
+    T: std::ops::Add<Output = T>,
+    T: std::ops::Mul<Output = T>,
+    T: std::iter::Sum,
+{
     pub fn from_value(value: T, size: (usize, usize)) -> Self {
         Self {values: vec![value; size.0 * size.1], size}
     }
@@ -17,7 +33,7 @@ impl<T: Clone + Copy> Matrix<T> {
         Self {values, size}
     }
 
-    pub fn from_array(values: &[T], size: (usize, usize)) -> Self {
+    pub fn from_arr(values: &[T], size: (usize, usize)) -> Self {
         if size.0 * size.1 != values.len() {
             panic!("values has wrong size, expected {} * {} = {}, received {}", size.0, size.1, size.0 * size.1, values.len());
         }
@@ -77,6 +93,21 @@ impl<T: Clone + Copy> Matrix<T> {
     }
 }
 
+impl<T> std::ops::Add for Matrix<T>
+where
+    T: Clone,
+    T: Copy,
+    T: std::ops::Add<Output = T>,
+    T: std::ops::Mul<Output = T>,
+    T: std::iter::Sum,
+{
+    type Output = Matrix<T>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        operators::add::matrix(&self, &rhs).unwrap()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -110,8 +141,8 @@ mod tests {
         }
 
         #[test]
-        fn from_array() {
-            let result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+        fn from_arr() {
+            let result = Matrix::from_arr(&[0, 1, 2, 3], (2, 2));
             assert_eq!((2, 2), result.size);
             assert_eq!(4, result.values.len());
             assert_eq!(vec![0, 1, 2, 3], result.values);
@@ -119,13 +150,13 @@ mod tests {
 
         #[test]
         #[should_panic(expected = "values has wrong size")]
-        fn from_array_panic() {
-            let _result = Matrix::from_array(&[0, 1, 2], (2, 2));
+        fn from_arr_panic() {
+            let _result = Matrix::from_arr(&[0, 1, 2], (2, 2));
         }
 
         #[test]
-        fn from_array_using_vec() {
-            let result = Matrix::from_array(&vec![0, 1, 2, 3], (2, 2));
+        fn from_arr_using_vec() {
+            let result = Matrix::from_arr(&vec![0, 1, 2, 3], (2, 2));
             assert_eq!((2, 2), result.size);
             assert_eq!(4, result.values.len());
             assert_eq!(vec![0, 1, 2, 3], result.values);
@@ -149,31 +180,31 @@ mod tests {
 
         #[test]
         fn get_size() {
-            let result = Matrix::from_array(&[0, 1, 2, 3, 4, 5], (2, 3));
+            let result = Matrix::from_arr(&[0, 1, 2, 3, 4, 5], (2, 3));
             assert_eq!((2, 3), result.get_size());
         }
 
         #[test]
         fn get_vec() {
-            let result = Matrix::from_array(&[0, 1, 2, 3, 4, 5], (2, 3));
+            let result = Matrix::from_arr(&[0, 1, 2, 3, 4, 5], (2, 3));
             assert_eq!(vec![0, 1, 2, 3, 4, 5], result.get_vec());
         }
 
         #[test]
         fn to_vec() {
-            let result = Matrix::from_array(&[0, 1, 2, 3, 4, 5], (2, 3));
+            let result = Matrix::from_arr(&[0, 1, 2, 3, 4, 5], (2, 3));
             assert_eq!(vec![0, 1, 2, 3, 4, 5], result.to_vec());
         }
 
         #[test]
         fn unwrap() {
-            let result = Matrix::from_array(&[0, 1, 2, 3, 4, 5], (2, 3));
+            let result = Matrix::from_arr(&[0, 1, 2, 3, 4, 5], (2, 3));
             assert_eq!((vec![0, 1, 2, 3, 4, 5], (2, 3)), result.unwrap());
         }
 
         #[test]
         fn get_value() {
-            let result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            let result = Matrix::from_arr(&[0, 1, 2, 3], (2, 2));
             assert_eq!(0, result.get_value(0, 0));
             assert_eq!(1, result.get_value(0, 1));
             assert_eq!(2, result.get_value(1, 0));
@@ -183,20 +214,20 @@ mod tests {
         #[test]
         #[should_panic(expected = "is out of bound of width")]
         fn get_value_panic_row() {
-            let result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            let result = Matrix::from_arr(&[0, 1, 2, 3], (2, 2));
             result.get_value(2, 0);
         }
 
         #[test]
         #[should_panic(expected = "is out of bound of height")]
         fn get_value_panic_column() {
-            let result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            let result = Matrix::from_arr(&[0, 1, 2, 3], (2, 2));
             result.get_value(0, 2);
         }
 
         #[test]
         fn set_value() {
-            let mut result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            let mut result = Matrix::from_arr(&[0, 1, 2, 3], (2, 2));
             result.set_value(10, 0, 0);
             result.set_value(11, 0, 1);
             result.set_value(12, 1, 0);
@@ -207,15 +238,32 @@ mod tests {
         #[test]
         #[should_panic(expected = "is out of bound of width")]
         fn set_value_panic_row() {
-            let mut result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            let mut result = Matrix::from_arr(&[0, 1, 2, 3], (2, 2));
             result.set_value(0, 2, 0);
         }
 
         #[test]
         #[should_panic(expected = "is out of bound of height")]
         fn set_value_panic_column() {
-            let mut result = Matrix::from_array(&[0, 1, 2, 3], (2, 2));
+            let mut result = Matrix::from_arr(&[0, 1, 2, 3], (2, 2));
             result.set_value(0, 0, 2);
         }
+
+        #[test]
+        fn add_matrix() {
+            let matrix1 = Matrix::from_arr(&[0., 1., 2., 3., 4., 5.], (3, 2));
+            let matrix2 = Matrix::from_arr(&[0., 10., 20., 30., 40., 50.], (3, 2));
+            let result = matrix1 + matrix2;
+            assert_eq!((3, 2), result.get_size());
+            assert_eq!(vec![0., 11., 22., 33., 44., 55.], result.to_vec());
+        }   
+
+        #[test]
+        #[should_panic(expected = "Matrices must have identical size when adding")]
+        fn add_matrix_panic() {
+            let matrix1 = Matrix::from_arr(&[0., 1., 2., 3., 4., 5.], (3, 2));
+            let matrix2 = Matrix::from_arr(&[0., 10., 20., 30., 40., 50.], (2, 3));
+            let _result = matrix1 + matrix2;
+        }   
     }
 }
