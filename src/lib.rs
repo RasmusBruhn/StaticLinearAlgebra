@@ -1,5 +1,5 @@
 mod objects;
-pub mod operators;
+//pub mod operators;
 mod errors;
 
 pub use objects::Matrix;

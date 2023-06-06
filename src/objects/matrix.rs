@@ -1,70 +1,29 @@
-use crate::operators;
-
 #[derive(Debug, PartialEq)]
-pub struct Matrix<T> 
+pub struct Matrix<T, const R: usize, const C: usize>
 where
-    T: Clone,
+    T: Copy,
     T: std::ops::Add<Output = T>,
     T: std::ops::Mul<Output = T>,
     T: std::iter::Sum,
 {
-    pub(crate) values: Vec<T>,
-    pub(crate) size: (usize, usize), 
+    pub(crate) values: [[T; C]; R],
 }
 
-impl<T> Matrix<T>
+impl<T, const R: usize, const C: usize> Matrix<T, R, C>
 where
-    T: Clone,
+    T: Copy,
     T: std::ops::Add<Output = T>,
     T: std::ops::Mul<Output = T>,
     T: std::iter::Sum,
 {
-    pub fn from_value(value: T, size: (usize, usize)) -> Self {
-        Self {values: vec![value; size.0 * size.1], size}
+    pub fn new(values: &[[T; C]; R]) -> Self {
+        Self {values: *values}
     }
 
-    pub fn from_vec(values: Vec<T>, size: (usize, usize)) -> Self {
-        if size.0 * size.1 != values.len() {
-            panic!("values has wrong size, expected {} * {} = {}, received {}", size.0, size.1, size.0 * size.1, values.len());
-        }
-
-        Self {values, size}
+    pub fn from_value(value: T) -> Self {
+        Self {values: [[value; C]; R]}
     }
-
-    pub fn from_arr(values: &[T], size: (usize, usize)) -> Self {
-        if size.0 * size.1 != values.len() {
-            panic!("values has wrong size, expected {} * {} = {}, received {}", size.0, size.1, size.0 * size.1, values.len());
-        }
-
-        Self {values: values.to_vec(), size}
-    }
-
-    pub fn from_diag_vec(values: Vec<T>, zero_value: T) -> Self {
-        let size = values.len();
-        let mut use_values: Vec<T> = vec![zero_value; size * size];
-        
-        for (n, value) in values.into_iter().enumerate() {
-            use_values[n * (size + 1)] = value;
-        }
-
-        Self {values: use_values, size: (size, size)}
-    }
-
-    pub fn from_diag_arr(values: &[T], zero_value: T) -> Self {
-        let size = values.len();
-        let mut use_values: Vec<T> = vec![zero_value; size * size];
-        
-        for (n, value) in values.iter().enumerate() {
-            use_values[n * (size + 1)] = value.clone();
-        }
-
-        Self {values: use_values, size: (size, size)}
-    }
-
-    pub fn get_size(&self) -> (usize, usize) {
-        self.size
-    }
-
+/*
     pub fn get_vec(&self) -> Vec<T> {
         self.values.clone()
     }
@@ -99,6 +58,37 @@ where
         }
 
         self.values[column + self.size.1 * row] = value;
+    } */
+}
+/*
+impl<T, const S: usize> Matrix<T, S, S> {
+    pub fn from_diag_vec(values: Vec<T>, zero_value: T) -> Self {
+        if S != values.len() {
+            panic!("values has wrong size, expected {}, received {}", S, values.len());
+        }
+
+        let mut use_values: Vec<T> = vec![zero_value; S * S];
+        
+        for (n, value) in values.into_iter().enumerate() {
+            use_values[n * (S + 1)] = value;
+        }
+
+        Self {values: use_values}
+    }
+
+    pub fn from_diag_arr(values: &[T], zero_value: T) -> Self {
+        if S != values.len() {
+            panic!("values has wrong size, expected {}, received {}", S, values.len());
+        }
+
+        let size = values.len();
+        let mut use_values: Vec<T> = vec![zero_value; size * size];
+        
+        for (n, value) in values.iter().enumerate() {
+            use_values[n * (size + 1)] = value.clone();
+        }
+
+        Self {values: use_values, size: (size, size)}
     }
 }
 
@@ -114,7 +104,7 @@ where
     fn add(self, rhs: Self) -> Self::Output {
         operators::add::matrix(self, rhs).unwrap()
     }
-}
+} */
 
 #[cfg(test)]
 mod tests {
@@ -124,16 +114,17 @@ mod tests {
         use super::*;
 
         #[test]
-        fn from_value() {
-            let result: Matrix<f32> = Matrix::from_value(0., (2, 5));
-            assert_eq!((2, 5), result.size);
-            assert_eq!(10, result.values.len());
-
-            for value in result.values {
-                assert_eq!(0., value);
-            }
+        fn new() {
+            let result: Matrix<i32, 3, 2> = Matrix::new(&[[0, 1], [2, 3], [4, 5]]);
+            assert_eq!([[0, 1], [2, 3], [4, 5]], result.values);
         }
 
+        #[test]
+        fn from_value() {
+            let result: Matrix<f32, 2, 5> = Matrix::from_value(0.);
+            assert_eq!([[0.; 5]; 2], result.values);
+        }
+/*
         #[test]
         fn from_vec() {
             let result = Matrix::from_vec(vec![0, 1, 2, 3], (2, 2));
@@ -272,6 +263,6 @@ mod tests {
             let matrix1 = Matrix::from_arr(&[0., 1., 2., 3., 4., 5.], (3, 2));
             let matrix2 = Matrix::from_arr(&[0., 10., 20., 30., 40., 50.], (2, 3));
             let _result = matrix1 + matrix2;
-        }   
+        }    */
     }
 }
