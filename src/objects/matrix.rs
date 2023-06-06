@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Add};
+use std::ops::{Index, IndexMut, Add, Sub};
 use num::traits::Zero;
 use itertools::Itertools;
 
@@ -67,6 +67,21 @@ where
     }
 }
 
+impl<T, const R: usize, const C: usize> Zero for Matrix<T, R, C>
+where
+    T: Copy,
+    T: Zero,
+    T: PartialEq,
+{
+    fn zero() -> Self {
+        Self::from_value(T::zero())
+    }
+
+    fn is_zero(&self) -> bool {
+        (0..R).cartesian_product(0..C).any(|(r, c)| self[r][c] != T::zero()) ^ true
+    }
+}
+
 impl<T, TR, O, const R: usize, const C: usize> Add<Matrix<TR, R, C>> for Matrix<T, R, C>
 where
     T: Copy,
@@ -115,18 +130,51 @@ where
     }
 }
 
-impl<T, const R: usize, const C: usize> Zero for Matrix<T, R, C>
+impl<T, TR, O, const R: usize, const C: usize> Sub<Matrix<TR, R, C>> for Matrix<T, R, C>
 where
     T: Copy,
-    T: Zero,
-    T: PartialEq,
+    T: std::ops::Sub<TR, Output = O>,
+    TR: Copy,
+    O: Copy,
 {
-    fn zero() -> Self {
-        Self::from_value(T::zero())
-    }
+    type Output = Matrix<O, R, C>;
 
-    fn is_zero(&self) -> bool {
-        (0..R).cartesian_product(0..C).any(|(r, c)| self[r][c] != T::zero()) ^ true
+    fn sub(self, rhs: Matrix<TR, R, C>) -> Self::Output {
+        let values: [[O; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self[r][c] - rhs[r][c]).collect::<Vec<O>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[O; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
+    }
+}
+
+impl<T, TR, O, const R: usize, const C: usize> Sub<&Matrix<TR, R, C>> for &Matrix<T, R, C>
+where
+    T: Copy,
+    for<'a> &'a T: std::ops::Sub<&'a TR, Output = O>,
+    TR: Copy,
+    O: Copy,
+{
+    type Output = Matrix<O, R, C>;
+
+    fn sub(self, rhs: &Matrix<TR, R, C>) -> Self::Output {
+        let values: [[O; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| &self[r][c] - &rhs[r][c]).collect::<Vec<O>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[O; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
     }
 }
 
@@ -202,6 +250,22 @@ mod tests {
             let b = Matrix::new(&[[0, 10], [20, 30]]);
             let c = &a + &b;
             assert_eq!([[0, 11], [22, 33]], c.values);
+        }
+
+        #[test]
+        fn sub() {
+            let a = Matrix::new(&[[0, 1], [2, 3]]);
+            let b = Matrix::new(&[[0, 10], [20, 30]]);
+            let c = a - b;
+            assert_eq!([[0, -9], [-18, -27]], c.values);
+        }
+
+        #[test]
+        fn sub_ref() {
+            let a = Matrix::new(&[[0, 1], [2, 3]]);
+            let b = Matrix::new(&[[0, 10], [20, 30]]);
+            let c = &a - &b;
+            assert_eq!([[0, -9], [-18, -27]], c.values);
         }
 
         #[test]
