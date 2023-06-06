@@ -1,4 +1,6 @@
 use std::ops::{Index, IndexMut, Add};
+use num::traits::Zero;
+use itertools::Itertools;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Matrix<T, const R: usize, const C: usize>
@@ -32,9 +34,10 @@ where
 impl<T, const S: usize> Matrix<T, S, S>
 where
     T: Copy,
+    T: Zero,
 {
-    pub fn from_diag(values: &[T; S], zero_value: T) -> Self {
-        let mut use_values= [[zero_value; S]; S];
+    pub fn from_diag(values: &[T; S]) -> Self {
+        let mut use_values= [[T::zero(); S]; S];
         
         for (n, value) in values.iter().enumerate() {
             use_values[n][n] = *value;
@@ -74,9 +77,9 @@ where
     type Output = Matrix<O, R, C>;
 
     fn add(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[O; C]; R] = match self.values.iter().zip(rhs.values.iter())
-        .map(|(lhs, rhs)| match lhs.iter().zip(rhs.iter())
-        .map(|(lhs, rhs)| *lhs + *rhs).collect::<Vec<O>>().try_into() {
+        let values: [[O; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self[r][c] + rhs[r][c]).collect::<Vec<O>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         }).collect::<Vec<[O; C]>>().try_into() {
@@ -98,9 +101,9 @@ where
     type Output = Matrix<O, R, C>;
 
     fn add(self, rhs: &Matrix<TR, R, C>) -> Self::Output {
-        let values: [[O; C]; R] = match self.values.iter().zip(rhs.values.iter())
-        .map(|(lhs, rhs)| match lhs.iter().zip(rhs.iter())
-        .map(|(lhs, rhs)| lhs + rhs).collect::<Vec<O>>().try_into() {
+        let values: [[O; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| &self[r][c] + &rhs[r][c]).collect::<Vec<O>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         }).collect::<Vec<[O; C]>>().try_into() {
@@ -109,6 +112,21 @@ where
         };
 
         Self::Output {values}
+    }
+}
+
+impl<T, const R: usize, const C: usize> Zero for Matrix<T, R, C>
+where
+    T: Copy,
+    T: Zero,
+    T: PartialEq,
+{
+    fn zero() -> Self {
+        Self::from_value(T::zero())
+    }
+
+    fn is_zero(&self) -> bool {
+        (0..R).cartesian_product(0..C).any(|(r, c)| self[r][c] != T::zero()) ^ true
     }
 }
 
@@ -133,7 +151,7 @@ mod tests {
 
         #[test]
         fn from_diag() {
-            let result = Matrix::from_diag(&[1, 2], 0);
+            let result = Matrix::from_diag(&[1, 2]);
             assert_eq!([[1, 0], [0, 2]], result.values);
         }
 
@@ -184,6 +202,25 @@ mod tests {
             let b = Matrix::new(&[[0, 10], [20, 30]]);
             let c = &a + &b;
             assert_eq!([[0, 11], [22, 33]], c.values);
+        }
+
+        #[test]
+        fn zero() {
+            let matrix_zero: Matrix<f64, 4, 5> = Matrix::zero();
+            assert_eq!([[0f64; 5]; 4], matrix_zero.values);
+        }
+
+        #[test]
+        fn is_zero_true() {
+            let result: Matrix<i32, 3, 3> = Matrix::from_value(0);
+            assert_eq!(true, result.is_zero());
+        }
+
+        #[test]
+        fn is_zero_false() {
+            let mut result: Matrix<i32, 3, 3> = Matrix::from_value(1);
+            result[1][0] = 1;
+            assert_eq!(false, result.is_zero());
         }
     }
 }

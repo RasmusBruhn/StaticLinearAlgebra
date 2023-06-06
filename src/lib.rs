@@ -1,6 +1,6 @@
 mod objects;
 //pub mod operators;
-mod errors;
+//mod errors;
 
 pub use objects::Matrix;
-pub use errors::LinAlgError;
+//pub use errors::LinAlgError;
