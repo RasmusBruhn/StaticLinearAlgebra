@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Add, Sub, Mul};
+use std::ops::{Index, IndexMut, Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
 use num::{traits::{Zero, Num}, Complex};
 use itertools::Itertools;
 use std::iter::Sum;
@@ -143,6 +143,27 @@ where
     }
 }
 
+impl<TL, TR, const R: usize, const C: usize> AddAssign<Matrix<TR, R, C>> for Matrix<TL, R, C>
+where
+    TL: Copy,
+    TL: Add<TR, Output = TL>,
+    TR: Copy,
+{
+    fn add_assign(&mut self, rhs: Matrix<TR, R, C>) {
+        let values: [[TL; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self[r][c] + rhs[r][c]).collect::<Vec<TL>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TL; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        self.values = values;
+    }
+}
+
 impl<TL, TR, TO, const R: usize, const C: usize> Sub<Matrix<TR, R, C>> for Matrix<TL, R, C>
 where
     TL: Copy,
@@ -164,6 +185,27 @@ where
         };
 
         Self::Output {values}
+    }
+}
+
+impl<TL, TR, const R: usize, const C: usize> SubAssign<Matrix<TR, R, C>> for Matrix<TL, R, C>
+where
+    TL: Copy,
+    TL: Sub<TR, Output = TL>,
+    TR: Copy,
+{
+    fn sub_assign(&mut self, rhs: Matrix<TR, R, C>) {
+        let values: [[TL; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self[r][c] - rhs[r][c]).collect::<Vec<TL>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TL; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        self.values = values;
     }
 }
 
@@ -190,6 +232,29 @@ where
         };
 
         Self::Output {values}
+    }
+}
+
+impl<TL, TR, const S: usize> MulAssign<Matrix<TR, S, S>> for Matrix<TL, S, S>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TL>,
+    TL: Sum,
+    TR: Copy,
+{
+    fn mul_assign(&mut self, rhs: Matrix<TR, S, S>) {
+        let values: [[TL; S]; S] = 
+            match (0..S).map(|r| 
+            match (0..S).map(|c| 
+            (0..S).map(|k| self[r][k] * rhs[k][c]).sum()).collect::<Vec<TL>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TL; S]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        self.values = values;
     }
 }
 
@@ -384,6 +449,14 @@ mod tests {
         }
 
         #[test]
+        fn add_assign() {
+            let mut a = Matrix::new(&[[0, 1], [2, 3]]);
+            let b = Matrix::new(&[[0, 10], [20, 30]]);
+            a += b;
+            assert_eq!([[0, 11], [22, 33]], a.values);
+        }
+
+        #[test]
         fn sub() {
             let a = Matrix::new(&[[0, 1], [2, 3]]);
             let b = Matrix::new(&[[0, 10], [20, 30]]);
@@ -392,11 +465,27 @@ mod tests {
         }
 
         #[test]
+        fn sub_assign() {
+            let mut a = Matrix::new(&[[0, 1], [2, 3]]);
+            let b = Matrix::new(&[[0, 10], [20, 30]]);
+            a -= b;
+            assert_eq!([[0, -9], [-18, -27]], a.values);
+        }
+
+        #[test]
         fn mul() {
             let matrix1 = Matrix::new(&[[0, 1, 2, 3], [4, 5, 6, 7]]);
             let matrix2 = Matrix::new(&[[0, 10, 20], [30, 40, 50], [60, 70, 80], [90, 100, 110]]);
             let result = matrix1 * matrix2;
             assert_eq!([[420, 480, 540], [1140, 1360, 1580]], result.values);    
+        }
+
+        #[test]
+        fn mul_assign() {
+            let mut matrix1 = Matrix::new(&[[0, 1], [2, 3]]);
+            let matrix2 = Matrix::new(&[[0, 10], [20, 30]]);
+            matrix1 *= matrix2;
+            assert_eq!([[20, 30], [60, 110]], matrix1.values);    
         }
 
         #[test]
