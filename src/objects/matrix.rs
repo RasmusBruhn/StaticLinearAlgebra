@@ -1,5 +1,5 @@
 use std::ops::{Index, IndexMut, Add, Sub, Mul};
-use num::traits::{Zero, Num};
+use num::{traits::{Zero, Num}, Complex};
 use itertools::Itertools;
 use std::iter::Sum;
 
@@ -143,30 +143,6 @@ where
     }
 }
 
-impl<TL, TR, TO, const R: usize, const C: usize> Add<&Matrix<TR, R, C>> for &Matrix<TL, R, C>
-where
-    TL: Copy,
-    for<'a> &'a TL: Add<&'a TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
-{
-    type Output = Matrix<TO, R, C>;
-
-    fn add(self, rhs: &Matrix<TR, R, C>) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| &self[r][c] + &rhs[r][c]).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        Self::Output {values}
-    }
-}
-
 impl<TL, TR, TO, const R: usize, const C: usize> Sub<Matrix<TR, R, C>> for Matrix<TL, R, C>
 where
     TL: Copy,
@@ -180,30 +156,6 @@ where
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
             match (0..C).map(|c| self[r][c] - rhs[r][c]).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        Self::Output {values}
-    }
-}
-
-impl<TL, TR, TO, const R: usize, const C: usize> Sub<&Matrix<TR, R, C>> for &Matrix<TL, R, C>
-where
-    TL: Copy,
-    for<'a> &'a TL: Sub<&'a TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
-{
-    type Output = Matrix<TO, R, C>;
-
-    fn sub(self, rhs: &Matrix<TR, R, C>) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| &self[r][c] - &rhs[r][c]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         }).collect::<Vec<[TO; C]>>().try_into() {
@@ -241,32 +193,6 @@ where
     }
 }
 
-impl<TL, TR, TO, const R: usize, const K: usize, const C: usize> Mul<&Matrix<TR, K, C>> for &Matrix<TL, R, K>
-where
-    TL: Copy,
-    for<'a> &'a TL: Mul<&'a TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
-    TO: Sum,
-{
-    type Output = Matrix<TO, R, C>;
-
-    fn mul(self, rhs: &Matrix<TR, K, C>) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| 
-            (0..K).map(|k| &self[r][k] * &rhs[k][c]).sum()).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        Self::Output {values}
-    }
-}
-
 impl<TL, TR, TO, const R: usize, const C: usize> Mul<TR> for Matrix<TL, R, C>
 where
     TL: Copy,
@@ -292,34 +218,37 @@ where
     }
 }
 
-impl<TL, TR, TO, const R: usize, const C: usize> Mul<&TR> for &Matrix<TL, R, C>
-where
-    TL: Copy,
-    for<'a> &'a TL: Mul<&'a TR, Output = TO>,
-    TR: Copy,
-    TR: Num,
-    TO: Copy,
-{
-    type Output = Matrix<TO, R, C>;
+macro_rules! dot_method {
+    ($TL:ty) => {
+        impl<TR, TO, const R: usize, const C: usize> Mul<Matrix<TR, R, C>> for $TL
+        where
+            $TL: Mul<TR, Output = TO>,
+            TR: Copy,
+            TO: Copy,
+        {
+            type Output = Matrix<TO, R, C>;
 
-    fn mul(self, rhs: &TR) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| &self[r][c] * rhs).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+            fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
+                let values: [[TO; C]; R] = 
+                    match (0..R).map(|r| 
+                    match (0..C).map(|c| self * rhs[r][c]).collect::<Vec<TO>>().try_into() {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                }).collect::<Vec<[TO; C]>>().try_into() {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                };
 
-        Self::Output {values}
-    }
+                Self::Output {values}
+            }
+        }
+    };
 }
 
-impl<TR, TO, const R: usize, const C: usize> Mul<Matrix<TR, R, C>> for f32
+impl<T, TR, TO, const R: usize, const C: usize> Mul<Matrix<TR, R, C>> for Complex<T>
 where
-    f32: Mul<TR, Output = TO>,
+    Complex<T>: Copy,
+    Complex<T>: Mul<TR, Output = TO>,
     TR: Copy,
     TO: Copy,
 {
@@ -339,6 +268,21 @@ where
         Self::Output {values}
     }
 }
+
+dot_method!(u8);
+dot_method!(u16);
+dot_method!(u32);
+dot_method!(u64);
+dot_method!(u128);
+dot_method!(usize);
+dot_method!(i8);
+dot_method!(i16);
+dot_method!(i32);
+dot_method!(i64);
+dot_method!(i128);
+dot_method!(isize);
+dot_method!(f32);
+dot_method!(f64);
 
 #[cfg(test)]
 mod tests {
@@ -440,26 +384,10 @@ mod tests {
         }
 
         #[test]
-        fn add_ref() {
-            let a = Matrix::new(&[[0, 1], [2, 3]]);
-            let b = Matrix::new(&[[0, 10], [20, 30]]);
-            let c = &a + &b;
-            assert_eq!([[0, 11], [22, 33]], c.values);
-        }
-
-        #[test]
         fn sub() {
             let a = Matrix::new(&[[0, 1], [2, 3]]);
             let b = Matrix::new(&[[0, 10], [20, 30]]);
             let c = a - b;
-            assert_eq!([[0, -9], [-18, -27]], c.values);
-        }
-
-        #[test]
-        fn sub_ref() {
-            let a = Matrix::new(&[[0, 1], [2, 3]]);
-            let b = Matrix::new(&[[0, 10], [20, 30]]);
-            let c = &a - &b;
             assert_eq!([[0, -9], [-18, -27]], c.values);
         }
 
@@ -472,25 +400,43 @@ mod tests {
         }
 
         #[test]
-        fn mul_ref() {
-            let matrix1 = Matrix::new(&[[0, 1, 2, 3], [4, 5, 6, 7]]);
-            let matrix2 = Matrix::new(&[[0, 10, 20], [30, 40, 50], [60, 70, 80], [90, 100, 110]]);
-            let result = &matrix1 * &matrix2;
-            assert_eq!([[420, 480, 540], [1140, 1360, 1580]], result.values);    
-        }
-
-        #[test]
         fn scalar_mul_right() {
             let matrix = Matrix::new(&[[0, 1, 2]]);
             let result = matrix * 4;
             assert_eq!([[0, 4, 8]], result.values);    
         }
 
+        macro_rules! dot_method_test {
+            ($T:ty, $name:ident) => {
+                #[test]
+                fn $name() {
+                    let matrix: Matrix<$T, 1, 3> = Matrix::new(&[[0 as $T, 1 as $T, 2 as $T]]);
+                    let result = (4 as $T) * matrix;
+                    assert_eq!([[0 as $T, 4 as $T, 8 as $T]], result.values);    
+                }
+            };
+        }
+
+        dot_method_test!(u8, scalar_mul_left_u8);
+        dot_method_test!(u16, scalar_mul_left_u16);
+        dot_method_test!(u32, scalar_mul_left_u32);
+        dot_method_test!(u64, scalar_mul_left_u64);
+        dot_method_test!(u128, scalar_mul_left_u128);
+        dot_method_test!(usize, scalar_mul_left_usize);
+        dot_method_test!(i8, scalar_mul_left_i8);
+        dot_method_test!(i16, scalar_mul_left_i16);
+        dot_method_test!(i32, scalar_mul_left_i32);
+        dot_method_test!(i64, scalar_mul_left_i64);
+        dot_method_test!(i128, scalar_mul_left_i128);
+        dot_method_test!(isize, scalar_mul_left_isize);
+        dot_method_test!(f32, scalar_mul_left_f32);
+        dot_method_test!(f64, scalar_mul_left_f64);
+
         #[test]
-        fn scalar_mul_right_ref() {
-            let matrix = Matrix::new(&[[0, 1, 2]]);
-            let result = &matrix * &4;
-            assert_eq!([[0, 4, 8]], result.values);    
+        fn scalar_mul_left_complex() {
+            let matrix = Matrix::new(&[[Complex::new(0., 0.), Complex::new(1., 0.), Complex::new(0., 1.)]]);
+            let result = Complex::new(0., 4.) * matrix;
+            assert_eq!([[Complex::new(0., 0.), Complex::new(0., 4.), Complex::new(-4., 0.)]], result.values);    
         }
     }
 }
