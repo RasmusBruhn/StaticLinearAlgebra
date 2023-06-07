@@ -30,6 +30,20 @@ where
     pub fn get_values_mut(&mut self) -> &mut [[T; C]; R] {
         &mut self.values
     }
+
+    pub fn transpose(&self) -> Matrix<T, C, R> {
+        let values: [[T; R]; C] = 
+            match (0..C).map(|r| 
+            match (0..R).map(|c| self[c][r]).collect::<Vec<T>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[T; R]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Matrix {values}
+    }
 }
 
 impl<T, const S: usize> Matrix<T, S, S>
@@ -526,6 +540,13 @@ mod tests {
             let matrix = Matrix::new(&[[Complex::new(0., 0.), Complex::new(1., 0.), Complex::new(0., 1.)]]);
             let result = Complex::new(0., 4.) * matrix;
             assert_eq!([[Complex::new(0., 0.), Complex::new(0., 4.), Complex::new(-4., 0.)]], result.values);    
+        }
+
+        #[test]
+        fn transpose() {
+            let matrix = Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
+            let result = matrix.transpose();
+            assert_eq!([[0, 3], [1, 4], [2, 5]], result.values);
         }
     }
 }
