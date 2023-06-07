@@ -2,6 +2,7 @@ use std::ops::{Index, IndexMut, Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
 use num::{traits::{Zero, Num}, Complex};
 use itertools::Itertools;
 use std::iter::Sum;
+use core::ops::Neg;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Matrix<T, const R: usize, const C: usize>
@@ -59,6 +60,38 @@ where
         }
 
         Self {values: use_values}
+    }
+}
+
+impl<T, const R: usize, const C: usize> Matrix<Complex<T>, R, C> 
+where
+    T: Copy,
+    T: Num,
+    T: Neg<Output = T>,
+{
+    pub fn hermitian_conjugate(&self) -> Matrix<Complex<T>, C, R> {
+        let values: [[Complex<T>; R]; C] = 
+            match (0..C).map(|r| 
+            match (0..R).map(|c| self[c][r].conj()).collect::<Vec<Complex<T>>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[Complex<T>; R]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Matrix {values}
+    }
+}
+
+impl<T, const S: usize> Matrix<Complex<T>, S, S> 
+where
+    T: Copy,
+    T: Num,
+    T: Neg<Output = T>,
+{
+    pub fn is_hermitian(&self) -> bool {
+        (0..S).any(|r| (0..r+1).any(|c| self[r][c] != self[c][r].conj())) ^ true
     }
 }
 
@@ -547,6 +580,21 @@ mod tests {
             let matrix = Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
             let result = matrix.transpose();
             assert_eq!([[0, 3], [1, 4], [2, 5]], result.values);
+        }
+
+        #[test]
+        fn hermitian_conjugate() {
+            let matrix = Matrix::new(&[[Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)], [Complex::new(1, 1), Complex::new(-1, 0), Complex::new(0, -1)]]);
+            let result = matrix.transpose();
+            assert_eq!([[Complex::new(0, 0), Complex::new(1, 1)], [Complex::new(1, 0), Complex::new(-1, 0)], [Complex::new(0, 1), Complex::new(0, -1)]], result.values);
+        }
+
+        #[test]
+        fn is_hermitian() {
+            let matrix1 = Matrix::new(&[[Complex::new(1, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(0, 0)]]);
+            let matrix2 = Matrix::new(&[[Complex::new(1, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(0, 1)]]);
+            assert_eq!(true, matrix1.is_hermitian());
+            assert_eq!(false, matrix2.is_hermitian());
         }
     }
 }
