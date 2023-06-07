@@ -1,5 +1,5 @@
 use std::ops::{Index, IndexMut, Add, Sub, Mul};
-use num::traits::Zero;
+use num::traits::{Zero, Num};
 use itertools::Itertools;
 use std::iter::Sum;
 
@@ -119,22 +119,22 @@ where
     }
 }
 
-impl<T, TR, O, const R: usize, const C: usize> Add<Matrix<TR, R, C>> for Matrix<T, R, C>
+impl<TL, TR, TO, const R: usize, const C: usize> Add<Matrix<TR, R, C>> for Matrix<TL, R, C>
 where
-    T: Copy,
-    T: Add<TR, Output = O>,
+    TL: Copy,
+    TL: Add<TR, Output = TO>,
     TR: Copy,
-    O: Copy,
+    TO: Copy,
 {
-    type Output = Matrix<O, R, C>;
+    type Output = Matrix<TO, R, C>;
 
     fn add(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[O; C]; R] = 
+        let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] + rhs[r][c]).collect::<Vec<O>>().try_into() {
+            match (0..C).map(|c| self[r][c] + rhs[r][c]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[O; C]>>().try_into() {
+        }).collect::<Vec<[TO; C]>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -143,22 +143,22 @@ where
     }
 }
 
-impl<T, TR, O, const R: usize, const C: usize> Add<&Matrix<TR, R, C>> for &Matrix<T, R, C>
+impl<TL, TR, TO, const R: usize, const C: usize> Add<&Matrix<TR, R, C>> for &Matrix<TL, R, C>
 where
-    T: Copy,
-    for<'a> &'a T: Add<&'a TR, Output = O>,
+    TL: Copy,
+    for<'a> &'a TL: Add<&'a TR, Output = TO>,
     TR: Copy,
-    O: Copy,
+    TO: Copy,
 {
-    type Output = Matrix<O, R, C>;
+    type Output = Matrix<TO, R, C>;
 
     fn add(self, rhs: &Matrix<TR, R, C>) -> Self::Output {
-        let values: [[O; C]; R] = 
+        let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
-            match (0..C).map(|c| &self[r][c] + &rhs[r][c]).collect::<Vec<O>>().try_into() {
+            match (0..C).map(|c| &self[r][c] + &rhs[r][c]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[O; C]>>().try_into() {
+        }).collect::<Vec<[TO; C]>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -167,22 +167,22 @@ where
     }
 }
 
-impl<T, TR, O, const R: usize, const C: usize> Sub<Matrix<TR, R, C>> for Matrix<T, R, C>
+impl<TL, TR, TO, const R: usize, const C: usize> Sub<Matrix<TR, R, C>> for Matrix<TL, R, C>
 where
-    T: Copy,
-    T: Sub<TR, Output = O>,
+    TL: Copy,
+    TL: Sub<TR, Output = TO>,
     TR: Copy,
-    O: Copy,
+    TO: Copy,
 {
-    type Output = Matrix<O, R, C>;
+    type Output = Matrix<TO, R, C>;
 
     fn sub(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[O; C]; R] = 
+        let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] - rhs[r][c]).collect::<Vec<O>>().try_into() {
+            match (0..C).map(|c| self[r][c] - rhs[r][c]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[O; C]>>().try_into() {
+        }).collect::<Vec<[TO; C]>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -191,22 +191,22 @@ where
     }
 }
 
-impl<T, TR, O, const R: usize, const C: usize> Sub<&Matrix<TR, R, C>> for &Matrix<T, R, C>
+impl<TL, TR, TO, const R: usize, const C: usize> Sub<&Matrix<TR, R, C>> for &Matrix<TL, R, C>
 where
-    T: Copy,
-    for<'a> &'a T: Sub<&'a TR, Output = O>,
+    TL: Copy,
+    for<'a> &'a TL: Sub<&'a TR, Output = TO>,
     TR: Copy,
-    O: Copy,
+    TO: Copy,
 {
-    type Output = Matrix<O, R, C>;
+    type Output = Matrix<TO, R, C>;
 
     fn sub(self, rhs: &Matrix<TR, R, C>) -> Self::Output {
-        let values: [[O; C]; R] = 
+        let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
-            match (0..C).map(|c| &self[r][c] - &rhs[r][c]).collect::<Vec<O>>().try_into() {
+            match (0..C).map(|c| &self[r][c] - &rhs[r][c]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[O; C]>>().try_into() {
+        }).collect::<Vec<[TO; C]>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -215,24 +215,24 @@ where
     }
 }
 
-impl<T, TR, O, const R: usize, const K: usize, const C: usize> Mul<Matrix<TR, K, C>> for Matrix<T, R, K>
+impl<TL, TR, TO, const R: usize, const K: usize, const C: usize> Mul<Matrix<TR, K, C>> for Matrix<TL, R, K>
 where
-    T: Copy,
-    T: Mul<TR, Output = O>,
+    TL: Copy,
+    TL: Mul<TR, Output = TO>,
     TR: Copy,
-    O: Copy,
-    O: Sum,
+    TO: Copy,
+    TO: Sum,
 {
-    type Output = Matrix<O, R, C>;
+    type Output = Matrix<TO, R, C>;
 
     fn mul(self, rhs: Matrix<TR, K, C>) -> Self::Output {
-        let values: [[O; C]; R] = 
+        let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
             match (0..C).map(|c| 
-            (0..K).map(|k| self[r][k] * rhs[k][c]).sum()).collect::<Vec<O>>().try_into() {
+            (0..K).map(|k| self[r][k] * rhs[k][c]).sum()).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[O; C]>>().try_into() {
+        }).collect::<Vec<[TO; C]>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -241,24 +241,97 @@ where
     }
 }
 
-impl<T, TR, O, const R: usize, const K: usize, const C: usize> Mul<&Matrix<TR, K, C>> for &Matrix<T, R, K>
+impl<TL, TR, TO, const R: usize, const K: usize, const C: usize> Mul<&Matrix<TR, K, C>> for &Matrix<TL, R, K>
 where
-    T: Copy,
-    for<'a> &'a T: Mul<&'a TR, Output = O>,
+    TL: Copy,
+    for<'a> &'a TL: Mul<&'a TR, Output = TO>,
     TR: Copy,
-    O: Copy,
-    O: Sum,
+    TO: Copy,
+    TO: Sum,
 {
-    type Output = Matrix<O, R, C>;
+    type Output = Matrix<TO, R, C>;
 
     fn mul(self, rhs: &Matrix<TR, K, C>) -> Self::Output {
-        let values: [[O; C]; R] = 
+        let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
             match (0..C).map(|c| 
-            (0..K).map(|k| &self[r][k] * &rhs[k][c]).sum()).collect::<Vec<O>>().try_into() {
+            (0..K).map(|k| &self[r][k] * &rhs[k][c]).sum()).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[O; C]>>().try_into() {
+        }).collect::<Vec<[TO; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
+    }
+}
+
+impl<TL, TR, TO, const R: usize, const C: usize> Mul<TR> for Matrix<TL, R, C>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy,
+    TR: Num,
+    TO: Copy,
+{
+    type Output = Matrix<TO, R, C>;
+
+    fn mul(self, rhs: TR) -> Self::Output {
+        let values: [[TO; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self[r][c] * rhs).collect::<Vec<TO>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TO; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
+    }
+}
+
+impl<TL, TR, TO, const R: usize, const C: usize> Mul<&TR> for &Matrix<TL, R, C>
+where
+    TL: Copy,
+    for<'a> &'a TL: Mul<&'a TR, Output = TO>,
+    TR: Copy,
+    TR: Num,
+    TO: Copy,
+{
+    type Output = Matrix<TO, R, C>;
+
+    fn mul(self, rhs: &TR) -> Self::Output {
+        let values: [[TO; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| &self[r][c] * rhs).collect::<Vec<TO>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TO; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
+    }
+}
+
+impl<TR, TO, const R: usize, const C: usize> Mul<Matrix<TR, R, C>> for f32
+where
+    f32: Mul<TR, Output = TO>,
+    TR: Copy,
+    TO: Copy,
+{
+    type Output = Matrix<TO, R, C>;
+
+    fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
+        let values: [[TO; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self * rhs[r][c]).collect::<Vec<TO>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TO; C]>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -404,6 +477,20 @@ mod tests {
             let matrix2 = Matrix::new(&[[0, 10, 20], [30, 40, 50], [60, 70, 80], [90, 100, 110]]);
             let result = &matrix1 * &matrix2;
             assert_eq!([[420, 480, 540], [1140, 1360, 1580]], result.values);    
+        }
+
+        #[test]
+        fn scalar_mul_right() {
+            let matrix = Matrix::new(&[[0, 1, 2]]);
+            let result = matrix * 4;
+            assert_eq!([[0, 4, 8]], result.values);    
+        }
+
+        #[test]
+        fn scalar_mul_right_ref() {
+            let matrix = Matrix::new(&[[0, 1, 2]]);
+            let result = &matrix * &4;
+            assert_eq!([[0, 4, 8]], result.values);    
         }
     }
 }
