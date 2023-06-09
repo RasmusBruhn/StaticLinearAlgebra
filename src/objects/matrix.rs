@@ -3,6 +3,7 @@ use num::{traits::{Zero, Num}, Complex};
 use itertools::Itertools;
 use std::iter::Sum;
 use core::ops::Neg;
+use super::vector_column::VectorColumn;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Matrix<T, const R: usize, const C: usize>
@@ -292,6 +293,26 @@ where
     }
 }
 
+impl<TL, TR, TO, const R: usize, const C: usize> Mul<VectorColumn<TR, C>> for Matrix<TL, R, C>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy,
+    TO: Copy,
+    TO: Sum,
+{
+    type Output = VectorColumn<TO, R>;
+
+    fn mul(self, rhs: VectorColumn<TR, C>) -> Self::Output {
+        let values: [TO; R] = match (0..R).map(|r| (0..C).map(|c| self[r][c] * rhs[c]).sum()).collect::<Vec<TO>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
+    }
+}
+
 impl<TL, TR, const S: usize> MulAssign<Matrix<TR, S, S>> for Matrix<TL, S, S>
 where
     TL: Copy,
@@ -540,6 +561,14 @@ mod tests {
         let matrix2 = Matrix::new(&[[0, 10], [20, 30]]);
         matrix1 *= matrix2;
         assert_eq!([[20, 30], [60, 110]], matrix1.values);    
+    }
+
+    #[test]
+    fn mul_vector() {
+        let matrix = Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
+        let vector = VectorColumn::new(&[0, 1, 2]);
+        let result = matrix * vector;
+        assert_eq!([5, 14], result.values);
     }
 
     #[test]

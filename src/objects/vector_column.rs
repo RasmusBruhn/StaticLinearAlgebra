@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Add, Sub};
+use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign};
 use num::traits::Zero;
 use std::iter::Sum;
 
@@ -121,6 +121,22 @@ where
     }
 }
 
+impl<TL, TR, const S: usize> AddAssign<VectorColumn<TR, S>> for VectorColumn<TL, S>
+where
+    TL: Copy,
+    TL: Add<TR, Output = TL>,
+    TR: Copy,
+{
+    fn add_assign(&mut self, rhs: VectorColumn<TR, S>) {
+        let values: [TL; S] = match (0..S).map(|i| self[i] + rhs[i]).collect::<Vec<TL>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        self.values = values;
+    }
+}
+
 impl<TL, TR, TO, const S: usize> Sub<VectorColumn<TR, S>> for VectorColumn<TL, S>
 where
     TL: Copy,
@@ -137,6 +153,22 @@ where
         };
 
         Self::Output {values}
+    }
+}
+
+impl<TL, TR, const S: usize> SubAssign<VectorColumn<TR, S>> for VectorColumn<TL, S>
+where
+    TL: Copy,
+    TL: Sub<TR, Output = TL>,
+    TR: Copy,
+{
+    fn sub_assign(&mut self, rhs: VectorColumn<TR, S>) {
+        let values: [TL; S] = match (0..S).map(|i| self[i] - rhs[i]).collect::<Vec<TL>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        self.values = values;
     }
 }
 
@@ -220,10 +252,26 @@ mod tests {
     }
 
     #[test]
+    fn add_assign() {
+        let mut vector1 = VectorColumn::new(&[0, 1, 2]);
+        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        vector1 += vector2;
+        assert_eq!([0, 11, 22], vector1.values);
+    }
+
+    #[test]
     fn sub() {
         let vector1 = VectorColumn::new(&[0, 1, 2]);
         let vector2 = VectorColumn::new(&[0, 10, 20]);
         let result = vector1 - vector2;
         assert_eq!([0, -9, -18], result.values);
+    }
+
+    #[test]
+    fn sub_assign() {
+        let mut vector1 = VectorColumn::new(&[0, 1, 2]);
+        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        vector1 -= vector2;
+        assert_eq!([0, -9, -18], vector1.values);
     }
 }
