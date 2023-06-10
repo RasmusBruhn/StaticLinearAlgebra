@@ -1,6 +1,7 @@
 use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul, MulAssign};
 use num::{traits::{Zero, Num}, Complex};
 use std::iter::Sum;
+use super::VectorColumn;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VectorRow<T, const S: usize>
@@ -183,6 +184,21 @@ where
     type Output = TO;
 
     fn mul(self, rhs: VectorRow<TR, S>) -> Self::Output {
+        (0..S).map(|i| self[i] * rhs[i]).sum()
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for VectorRow<TL, S>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy,
+    TO: Copy,
+    TO: Sum,
+{
+    type Output = TO;
+
+    fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
         (0..S).map(|i| self[i] * rhs[i]).sum()
     }
 }
@@ -387,6 +403,14 @@ mod tests {
     fn dot_product() {
         let vector1 = VectorRow::new(&[0, 1, 2]);
         let vector2 = VectorRow::new(&[3, 4, 5]);
+        let result = vector1 * vector2;
+        assert_eq!(14, result);
+    }
+
+    #[test]
+    fn dot_product_column() {
+        let vector1 = VectorRow::new(&[0, 1, 2]);
+        let vector2 = VectorColumn::new(&[3, 4, 5]);
         let result = vector1 * vector2;
         assert_eq!(14, result);
     }
