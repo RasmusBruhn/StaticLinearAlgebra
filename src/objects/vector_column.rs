@@ -1,6 +1,7 @@
 use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul, MulAssign};
 use num::{traits::{Zero, Num}, Complex};
 use std::iter::Sum;
+use super::{Matrix, VectorRow};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VectorColumn<T, const S: usize>
@@ -184,6 +185,31 @@ where
 
     fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
         (0..S).map(|i| self[i] * rhs[i]).sum()
+    }
+}
+
+impl<TL, TR, TO, const R: usize, const C: usize> Mul<VectorRow<TR, C>> for VectorColumn<TL, R>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy,
+    TO: Copy,
+    TO: Sum,
+{
+    type Output = Matrix<TO, R, C>;
+
+    fn mul(self, rhs: VectorRow<TR, C>) -> Self::Output {
+        let values: [[TO; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self[r] * rhs[c]).collect::<Vec<TO>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TO; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Matrix {values}
     }
 }
 
@@ -389,6 +415,14 @@ mod tests {
         let vector2 = VectorColumn::new(&[3, 4, 5]);
         let result = vector1 * vector2;
         assert_eq!(14, result);
+    }
+
+    #[test]
+    fn out_product() {
+        let vector_row = VectorRow::new(&[0, 1]);
+        let vector_column = VectorColumn::new(&[2, 3, 4]);
+        let result = vector_column * vector_row;
+        assert_eq!([[0, 2], [0, 3], [0, 4]], result.values);
     }
 
     #[test]
