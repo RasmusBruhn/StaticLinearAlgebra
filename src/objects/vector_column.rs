@@ -1,5 +1,5 @@
-use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul};
-use num::traits::{Zero, Num};
+use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul, MulAssign};
+use num::{traits::{Zero, Num}, Complex};
 use std::iter::Sum;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -207,6 +207,79 @@ where
     }
 }
 
+impl<TL, TR, const S: usize> MulAssign<TR> for VectorColumn<TL, S>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TL>,
+    TR: Copy,
+    TR: Num,
+{
+    fn mul_assign(&mut self, rhs: TR) {
+        let values: [TL; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TL>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        self.values = values;
+    }
+}
+
+macro_rules! dot_method {
+    ($TL:ty) => {
+        impl<TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for $TL
+        where
+            $TL: Mul<TR, Output = TO>,
+            TR: Copy,
+            TO: Copy,
+        {
+            type Output = VectorColumn<TO, S>;
+
+            fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+                let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                };
+
+                Self::Output {values}
+            }
+        }
+    };
+}
+
+impl<T, TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for Complex<T>
+where
+    Complex<T>: Copy,
+    Complex<T>: Mul<TR, Output = TO>,
+    TR: Copy,
+    TO: Copy,
+{
+    type Output = VectorColumn<TO, S>;
+
+    fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+        let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
+    }
+}
+
+dot_method!(u8);
+dot_method!(u16);
+dot_method!(u32);
+dot_method!(u64);
+dot_method!(u128);
+dot_method!(usize);
+dot_method!(i8);
+dot_method!(i16);
+dot_method!(i32);
+dot_method!(i64);
+dot_method!(i128);
+dot_method!(isize);
+dot_method!(f32);
+dot_method!(f64);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,9 +392,49 @@ mod tests {
     }
 
     #[test]
-    fn scalar_mul() {
+    fn scalar_mul_right() {
         let vector = VectorColumn::new(&[0, 1, 2]);
         let result = vector * 5;
         assert_eq!([0, 5, 10], result.values);
+    }
+
+    #[test]
+    fn scalar_mul_assign() {
+        let mut vector = VectorColumn::new(&[0, 1, 2]);
+        vector *= 5;
+        assert_eq!([0, 5, 10], vector.values);
+    }
+
+    macro_rules! dot_method_test {
+        ($T:ty, $name:ident) => {
+            #[test]
+            fn $name() {
+                let vector: VectorColumn<$T, 3> = VectorColumn::new(&[0 as $T, 1 as $T, 2 as $T]);
+                let result = (4 as $T) * vector;
+                assert_eq!([0 as $T, 4 as $T, 8 as $T], result.values);    
+            }
+        };
+    }
+
+    dot_method_test!(u8, scalar_mul_left_u8);
+    dot_method_test!(u16, scalar_mul_left_u16);
+    dot_method_test!(u32, scalar_mul_left_u32);
+    dot_method_test!(u64, scalar_mul_left_u64);
+    dot_method_test!(u128, scalar_mul_left_u128);
+    dot_method_test!(usize, scalar_mul_left_usize);
+    dot_method_test!(i8, scalar_mul_left_i8);
+    dot_method_test!(i16, scalar_mul_left_i16);
+    dot_method_test!(i32, scalar_mul_left_i32);
+    dot_method_test!(i64, scalar_mul_left_i64);
+    dot_method_test!(i128, scalar_mul_left_i128);
+    dot_method_test!(isize, scalar_mul_left_isize);
+    dot_method_test!(f32, scalar_mul_left_f32);
+    dot_method_test!(f64, scalar_mul_left_f64);
+
+    #[test]
+    fn scalar_mul_left_complex() {
+        let vector = VectorColumn::new(&[Complex::new(0., 0.), Complex::new(1., 0.), Complex::new(0., 1.)]);
+        let result = Complex::new(0., 4.) * vector;
+        assert_eq!([Complex::new(0., 0.), Complex::new(0., 4.), Complex::new(-4., 0.)], result.values);    
     }
 }

@@ -361,6 +361,28 @@ where
     }
 }
 
+impl<TL, TR, const R: usize, const C: usize> MulAssign<TR> for Matrix<TL, R, C>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TL>,
+    TR: Copy,
+    TR: Num,
+{
+    fn mul_assign(&mut self, rhs: TR) {
+        let values: [[TL; C]; R] = 
+            match (0..R).map(|r| 
+            match (0..C).map(|c| self[r][c] * rhs).collect::<Vec<TL>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        }).collect::<Vec<[TL; C]>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        self.values = values;
+    }
+}
+
 macro_rules! dot_method {
     ($TL:ty) => {
         impl<TR, TO, const R: usize, const C: usize> Mul<Matrix<TR, R, C>> for $TL
@@ -576,6 +598,13 @@ mod tests {
         let matrix = Matrix::new(&[[0, 1, 2]]);
         let result = matrix * 4;
         assert_eq!([[0, 4, 8]], result.values);    
+    }
+
+    #[test]
+    fn scalar_mul_assign() {
+        let mut matrix = Matrix::new(&[[0, 1, 2]]);
+        matrix *= 4;
+        assert_eq!([[0, 4, 8]], matrix.values);    
     }
 
     macro_rules! dot_method_test {
