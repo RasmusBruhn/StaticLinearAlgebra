@@ -1,5 +1,5 @@
-use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign};
-use num::traits::Zero;
+use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul};
+use num::traits::{Zero, Num};
 use std::iter::Sum;
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -172,6 +172,41 @@ where
     }
 }
 
+impl<TL, TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for VectorColumn<TL, S>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy,
+    TO: Copy,
+    TO: Sum,
+{
+    type Output = TO;
+
+    fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+        (0..S).map(|i| self[i] * rhs[i]).sum()
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Mul<TR> for VectorColumn<TL, S>
+where
+    TL: Copy,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy,
+    TR: Num,
+    TO: Copy,
+{
+    type Output = VectorColumn<TO, S>;
+
+    fn mul(self, rhs: TR) -> Self::Output {
+        let values: [TO; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TO>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        Self::Output {values}
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -273,5 +308,20 @@ mod tests {
         let vector2 = VectorColumn::new(&[0, 10, 20]);
         vector1 -= vector2;
         assert_eq!([0, -9, -18], vector1.values);
+    }
+
+    #[test]
+    fn dot_product() {
+        let vector1 = VectorColumn::new(&[0, 1, 2]);
+        let vector2 = VectorColumn::new(&[3, 4, 5]);
+        let result = vector1 * vector2;
+        assert_eq!(14, result);
+    }
+
+    #[test]
+    fn scalar_mul() {
+        let vector = VectorColumn::new(&[0, 1, 2]);
+        let result = vector * 5;
+        assert_eq!([0, 5, 10], result.values);
     }
 }
