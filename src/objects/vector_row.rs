@@ -1,6 +1,7 @@
 use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul, MulAssign};
 use num::{traits::{Zero, Num}, Complex};
 use std::iter::Sum;
+use core::ops::Neg;
 use super::{Matrix, VectorColumn};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -29,6 +30,26 @@ where
 
     pub fn get_values_mut(&mut self) -> &mut [T; S] {
         &mut self.values
+    }
+
+    pub fn transpose(&self) -> VectorColumn<T, S> {
+        VectorColumn {values: self.values}
+    }
+}
+
+impl<T, const S: usize> VectorRow<Complex<T>, S> 
+where
+    T: Copy,
+    T: Num,
+    T: Neg<Output = T>,
+{
+    pub fn hermitian_conjugate(&self) -> VectorColumn<Complex<T>, S> {
+        let values: [Complex<T>; S] = match (0..S).map(|i| self[i].conj()).collect::<Vec<Complex<T>>>().try_into() {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
+
+        VectorColumn {values}
     }
 }
 
@@ -488,5 +509,19 @@ mod tests {
         let vector = VectorRow::new(&[Complex::new(0., 0.), Complex::new(1., 0.), Complex::new(0., 1.)]);
         let result = Complex::new(0., 4.) * vector;
         assert_eq!([Complex::new(0., 0.), Complex::new(0., 4.), Complex::new(-4., 0.)], result.values);    
+    }
+
+    #[test]
+    fn transpose() {
+        let vector = VectorRow::new(&[0, 1, 2]);
+        let result = vector.transpose();
+        assert_eq!([0, 1, 2], result.values);
+    }
+
+    #[test]
+    fn hermitian_conjugate() {
+        let vector = VectorRow::new(&[Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
+        let result = vector.hermitian_conjugate();
+        assert_eq!([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, -1)], result.values);
     }
 }
