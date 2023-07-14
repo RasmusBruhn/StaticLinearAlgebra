@@ -5,6 +5,13 @@ use std::iter::Sum;
 use core::ops::Neg;
 use super::vector_column::VectorColumn;
 
+/// A static matrix type
+/// 
+/// Size must be known at compile time but operations are checked for size compatibility at compile time too
+/// 
+/// R: The number of rows
+/// 
+/// C: The number of columns
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Matrix<T, const R: usize, const C: usize>
 where
@@ -17,21 +24,71 @@ impl<T, const R: usize, const C: usize> Matrix<T, R, C>
 where
     T: Copy,
 {
+    /// Initializes a new matrix with the given values
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
+    /// 
+    /// assert_eq!(x.get_values(), &[[0, 1, 2], [3, 4, 5]]);
+    /// ```
     pub fn new(values: &[[T; C]; R]) -> Self {
         Self {values: *values}
     }
 
+    /// Initializes a new matrix filled with a single value
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::<f32, 2, 2>::from_value(1.);
+    /// 
+    /// assert_eq!(x.get_values(), &[[1., 1.], [1., 1.]]);
+    /// ```
     pub fn from_value(value: T) -> Self {
         Self {values: [[value; C]; R]}
     }
 
+    /// Retrieves a reference to the data of the matrix
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let data = x.get_values();
+    /// 
+    /// assert_eq!(data, &[[0, 1], [2, 3]]);
+    /// ```
     pub fn get_values(&self) -> &[[T; C]; R] {
         &self.values
     }
 
+    /// Retrieves a mutable reference to the data of the matrix
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let data = x.get_values_mut();
+    /// data[0][1] = 5;
+    /// 
+    /// assert_eq!(x.get_values(), &[[0, 5], [2, 3]]);
+    /// ```
     pub fn get_values_mut(&mut self) -> &mut [[T; C]; R] {
         &mut self.values
     }
+
+    /// Transposes the matrix, switching row and columns
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
+    /// let y = x.transpose();
+    /// 
+    /// assert_eq!(y.get_values(), &[[0, 3], [1, 4], [2, 5]]);
+    /// ```
 
     pub fn transpose(&self) -> Matrix<T, C, R> {
         let values: [[T; R]; C] = 
@@ -53,6 +110,16 @@ where
     T: Copy,
     T: Zero,
 {
+    /// Initializes a diagonal matrix where the diagonal contains the values given
+    /// and everything else is 0
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::from_diag(&[2, 3]);
+    /// 
+    /// assert_eq!(x.get_values(), &[[2, 0], [0, 3]]);
+    /// ```
     pub fn from_diag(values: &[T; S]) -> Self {
         let mut use_values= [[T::zero(); S]; S];
         
@@ -70,6 +137,19 @@ where
     T: Num,
     T: Neg<Output = T>,
 {
+    /// Takes the hermitian conjugate of the matrix (transpose the matrix 
+    /// and complex conjugate each element (change the sign of the imaginary part))
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use num::Complex;
+    /// 
+    /// let x = linear_algebra::Matrix::new(&[[Complex::new(1, 0), Complex::new(0, 2)], [Complex::new(0, 3), Complex::new(0, 4)]]);
+    /// let y = x.hermitian_conjugate();
+    /// 
+    /// assert_eq!(y.get_values(), &[[Complex::new(1, 0), Complex::new(0, -3)], [Complex::new(0, -2), Complex::new(0, -4)]])
+    /// ```
     pub fn hermitian_conjugate(&self) -> Matrix<Complex<T>, C, R> {
         let values: [[Complex<T>; R]; C] = 
             match (0..C).map(|r| 
@@ -90,6 +170,21 @@ where
     T: Copy,
     T: PartialEq,
 {
+    /// Checks if the matrix is symmetric (the matrix is equal to its own transpose)
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [1, 2]]);
+    /// 
+    /// assert_eq!(x.is_symmetric(), true);
+    /// ```
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 1]]);
+    /// 
+    /// assert_eq!(x.is_symmetric(), false);
+    /// ```
     pub fn is_symmetric(&self) -> bool {
         (0..S).any(|r| (0..r+1).any(|c| self[r][c] != self[c][r])) ^ true
     }
@@ -101,6 +196,25 @@ where
     T: Num,
     T: Neg<Output = T>,
 {
+    /// Checks if the matrix is hearmitian (the matrix is equal to its own hearmitian conjugate)
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use num::Complex;
+    /// 
+    /// let x = linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
+    /// 
+    /// assert_eq!(x.is_hermitian(), true);
+    /// ```
+    /// 
+    /// ```
+    /// use num::Complex;
+    /// 
+    /// let x = linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
+    /// 
+    /// assert_eq!(x.is_hermitian(), false);
+    /// ```
     pub fn is_hermitian(&self) -> bool {
         (0..S).any(|r| (0..r+1).any(|c| self[r][c] != self[c][r].conj())) ^ true
     }
@@ -186,6 +300,18 @@ where
 {
     type Output = Matrix<TO, R, C>;
 
+    /// Normal elementwise addition of two matrices
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// 
+    /// let z = x + y;
+    /// 
+    /// assert_eq!(&[[0, 11], [22, 33]], z.get_values());
+    /// ```
     fn add(self, rhs: Matrix<TR, R, C>) -> Self::Output {
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
@@ -207,6 +333,18 @@ where
     TL: Add<TR, Output = TL>,
     TR: Copy,
 {
+    /// Normal elementwise addition of two matrices
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// 
+    /// x += y;
+    /// 
+    /// assert_eq!(&[[0, 11], [22, 33]], x.get_values());
+    /// ```
     fn add_assign(&mut self, rhs: Matrix<TR, R, C>) {
         let values: [[TL; C]; R] = 
             match (0..R).map(|r| 
@@ -231,6 +369,18 @@ where
 {
     type Output = Matrix<TO, R, C>;
 
+    /// Normal elementwise subtraction of two matrices
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// 
+    /// let z = x - y;
+    /// 
+    /// assert_eq!(&[[0, -9], [-18, -27]], z.get_values());
+    /// ```
     fn sub(self, rhs: Matrix<TR, R, C>) -> Self::Output {
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
@@ -252,6 +402,18 @@ where
     TL: Sub<TR, Output = TL>,
     TR: Copy,
 {
+    /// Normal elementwise subtraction of two matrices
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// 
+    /// x -= y;
+    /// 
+    /// assert_eq!(&[[0, -9], [-18, -27]], x.get_values());
+    /// ```
     fn sub_assign(&mut self, rhs: Matrix<TR, R, C>) {
         let values: [[TL; C]; R] = 
             match (0..R).map(|r| 
@@ -277,6 +439,18 @@ where
 {
     type Output = Matrix<TO, R, C>;
 
+    /// Normal matrix multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// 
+    /// let z = x * y;
+    /// 
+    /// assert_eq!(&[[20, 30], [60, 110]], z.get_values());
+    /// ```
     fn mul(self, rhs: Matrix<TR, K, C>) -> Self::Output {
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
@@ -303,6 +477,18 @@ where
 {
     type Output = VectorColumn<TO, R>;
 
+    /// Right hand side vector multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// 
+    /// let z = x * y;
+    /// 
+    /// assert_eq!(&[10, 30], z.get_values());
+    /// ```
     fn mul(self, rhs: VectorColumn<TR, C>) -> Self::Output {
         let values: [TO; R] = match (0..R).map(|r| (0..C).map(|c| self[r][c] * rhs[c]).sum()).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
@@ -320,6 +506,18 @@ where
     TL: Sum,
     TR: Copy,
 {
+    /// Normal matrix multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// 
+    /// x *= y;
+    /// 
+    /// assert_eq!(&[[20, 30], [60, 110]], x.get_values());
+    /// ```
     fn mul_assign(&mut self, rhs: Matrix<TR, S, S>) {
         let values: [[TL; S]; S] = 
             match (0..S).map(|r| 
@@ -346,6 +544,18 @@ where
 {
     type Output = Matrix<TO, R, C>;
 
+    /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = 10;
+    /// 
+    /// let z = x * y;
+    /// 
+    /// assert_eq!(&[[0, 10], [20, 30]], z.get_values());
+    /// ```
     fn mul(self, rhs: TR) -> Self::Output {
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
@@ -368,6 +578,18 @@ where
     TR: Copy,
     TR: Num,
 {
+    /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = 10;
+    /// 
+    /// x *= y;
+    /// 
+    /// assert_eq!(&[[0, 10], [20, 30]], x.get_values());
+    /// ```
     fn mul_assign(&mut self, rhs: TR) {
         let values: [[TL; C]; R] = 
             match (0..R).map(|r| 
@@ -393,6 +615,7 @@ macro_rules! dot_method {
         {
             type Output = Matrix<TO, R, C>;
 
+            /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
             fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
                 let values: [[TO; C]; R] = 
                     match (0..R).map(|r| 
@@ -419,6 +642,7 @@ where
 {
     type Output = Matrix<TO, R, C>;
 
+    /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
     fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
