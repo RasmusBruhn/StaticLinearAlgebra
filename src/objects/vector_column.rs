@@ -4,6 +4,11 @@ use std::iter::Sum;
 use core::ops::Neg;
 use super::{Matrix, VectorRow};
 
+/// A static column vector type
+/// 
+/// Size must be known at compile time but operations are checked for size compatibility at compile time too
+/// 
+/// S: The length of the vector
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VectorColumn<T, const S: usize>
 where
@@ -16,22 +21,71 @@ impl<T, const S: usize> VectorColumn<T, S>
 where
     T: Copy,
 {
+    /// Initializes a new column vector with the given values
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// 
+    /// assert_eq!(&[0, 1, 2], x.get_values());
+    /// ```
     pub fn new(values: &[T; S]) -> Self {
         Self {values: *values}
     }
 
+    /// Initializes a new column vector filled with a single value
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::<f32, 2>::from_value(1.);
+    /// 
+    /// assert_eq!(&[1., 1.], x.get_values());
+    /// ```
     pub fn from_value(value: T) -> Self {
         Self {values: [value; S]}
     }
 
+    /// Retrieves a reference to the data of the column vector
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let data = x.get_values();
+    /// 
+    /// assert_eq!(&[0, 1], data);
+    /// ```
     pub fn get_values(&self) -> &[T; S] {
         &self.values
     }
 
+    /// Retrieves a mutable reference to the data of the column vector
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let data = x.get_values_mut();
+    /// data[0] = 5;
+    /// 
+    /// assert_eq!(&[5, 1], x.get_values());
+    /// ```
     pub fn get_values_mut(&mut self) -> &mut [T; S] {
         &mut self.values
     }
 
+    /// Transposes the column vector into a row vector
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// let y = x.transpose();
+    /// 
+    /// assert_eq!(&[0, 1, 2], y.get_values());
+    /// ```
     pub fn transpose(&self) -> VectorRow<T, S> {
         VectorRow {values: self.values}
     }
@@ -43,6 +97,19 @@ where
     T: Num,
     T: Neg<Output = T>,
 {
+    /// Takes the hermitian conjugate of the column vector (transpose the vector 
+    /// and complex conjugate each element (change the sign of the imaginary part))
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// use num::Complex;
+    /// 
+    /// let x = linear_algebra::VectorColumn::new(&[Complex::new(1, 0), Complex::new(0, 2)]);
+    /// let y = x.hermitian_conjugate();
+    /// 
+    /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
+    /// ```
     pub fn hermitian_conjugate(&self) -> VectorRow<Complex<T>, S> {
         let values: [Complex<T>; S] = match (0..S).map(|i| self[i].conj()).collect::<Vec<Complex<T>>>().try_into() {
             Ok(result) => result,
@@ -133,6 +200,18 @@ where
 {
     type Output = VectorColumn<TO, S>;
 
+    /// Normal elementwise addition of two column vectors
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// 
+    /// let z = x + y;
+    /// 
+    /// assert_eq!(&[0, 11], z.get_values());
+    /// ```
     fn add(self, rhs: VectorColumn<TR, S>) -> Self::Output {
         let values: [TO; S] = match (0..S).map(|i| self[i] + rhs[i]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
@@ -149,6 +228,18 @@ where
     TL: Add<TR, Output = TL>,
     TR: Copy,
 {
+    /// Normal elementwise addition of two column vectors
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// 
+    /// x += y;
+    /// 
+    /// assert_eq!(&[0, 11], x.get_values());
+    /// ```
     fn add_assign(&mut self, rhs: VectorColumn<TR, S>) {
         let values: [TL; S] = match (0..S).map(|i| self[i] + rhs[i]).collect::<Vec<TL>>().try_into() {
             Ok(result) => result,
@@ -168,6 +259,18 @@ where
 {
     type Output = VectorColumn<TO, S>;
 
+    /// Normal elementwise subtraction of two matrices
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// 
+    /// let z = x - y;
+    /// 
+    /// assert_eq!(&[0, -9], z.get_values());
+    /// ```
     fn sub(self, rhs: VectorColumn<TR, S>) -> Self::Output {
         let values: [TO; S] = match (0..S).map(|i| self[i] - rhs[i]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
@@ -184,6 +287,18 @@ where
     TL: Sub<TR, Output = TL>,
     TR: Copy,
 {
+    /// Normal elementwise subtraction of two matrices
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// 
+    /// x -= y;
+    /// 
+    /// assert_eq!(&[0, -9], x.get_values());
+    /// ```
     fn sub_assign(&mut self, rhs: VectorColumn<TR, S>) {
         let values: [TL; S] = match (0..S).map(|i| self[i] - rhs[i]).collect::<Vec<TL>>().try_into() {
             Ok(result) => result,
@@ -204,6 +319,18 @@ where
 {
     type Output = TO;
 
+    /// Inner product (dot product) between two column vectors
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// 
+    /// let z = x * y;
+    /// 
+    /// assert_eq!(10, z);
+    /// ```
     fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
         (0..S).map(|i| self[i] * rhs[i]).sum()
     }
@@ -219,6 +346,18 @@ where
 {
     type Output = Matrix<TO, R, C>;
 
+    /// Outer product between a column vector and a row vector
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = linear_algebra::VectorRow::new(&[10, 20]);
+    /// 
+    /// let z = x * y;
+    /// 
+    /// assert_eq!(&[[0, 0], [10, 20]], z.get_values());
+    /// ```
     fn mul(self, rhs: VectorRow<TR, C>) -> Self::Output {
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
@@ -244,6 +383,18 @@ where
 {
     type Output = VectorColumn<TO, S>;
 
+    /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = 10;
+    /// 
+    /// let z = x * y;
+    /// 
+    /// assert_eq!(&[0, 10], z.get_values());
+    /// ```
     fn mul(self, rhs: TR) -> Self::Output {
         let values: [TO; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
@@ -261,6 +412,18 @@ where
     TR: Copy,
     TR: Num,
 {
+    /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = 10;
+    /// 
+    /// x *= y;
+    /// 
+    /// assert_eq!(&[0, 10], x.get_values());
+    /// ```
     fn mul_assign(&mut self, rhs: TR) {
         let values: [TL; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TL>>().try_into() {
             Ok(result) => result,
@@ -281,6 +444,7 @@ macro_rules! dot_method {
         {
             type Output = VectorColumn<TO, S>;
 
+            /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
             fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
                 let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
                     Ok(result) => result,
@@ -302,6 +466,7 @@ where
 {
     type Output = VectorColumn<TO, S>;
 
+    /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
     fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
         let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,

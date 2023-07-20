@@ -31,7 +31,7 @@ where
     /// ```
     /// let x = linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
     /// 
-    /// assert_eq!(x.get_values(), &[[0, 1, 2], [3, 4, 5]]);
+    /// assert_eq!(&[[0, 1, 2], [3, 4, 5]], x.get_values());
     /// ```
     pub fn new(values: &[[T; C]; R]) -> Self {
         Self {values: *values}
@@ -44,7 +44,7 @@ where
     /// ```
     /// let x = linear_algebra::Matrix::<f32, 2, 2>::from_value(1.);
     /// 
-    /// assert_eq!(x.get_values(), &[[1., 1.], [1., 1.]]);
+    /// assert_eq!(&[[1., 1.], [1., 1.]], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
         Self {values: [[value; C]; R]}
@@ -58,7 +58,7 @@ where
     /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
     /// let data = x.get_values();
     /// 
-    /// assert_eq!(data, &[[0, 1], [2, 3]]);
+    /// assert_eq!(&[[0, 1], [2, 3]], data);
     /// ```
     pub fn get_values(&self) -> &[[T; C]; R] {
         &self.values
@@ -73,7 +73,7 @@ where
     /// let data = x.get_values_mut();
     /// data[0][1] = 5;
     /// 
-    /// assert_eq!(x.get_values(), &[[0, 5], [2, 3]]);
+    /// assert_eq!(&[[0, 5], [2, 3]], x.get_values());
     /// ```
     pub fn get_values_mut(&mut self) -> &mut [[T; C]; R] {
         &mut self.values
@@ -87,9 +87,8 @@ where
     /// let x = linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
     /// let y = x.transpose();
     /// 
-    /// assert_eq!(y.get_values(), &[[0, 3], [1, 4], [2, 5]]);
+    /// assert_eq!(&[[0, 3], [1, 4], [2, 5]], y.get_values());
     /// ```
-
     pub fn transpose(&self) -> Matrix<T, C, R> {
         let values: [[T; R]; C] = 
             match (0..C).map(|r| 
@@ -118,7 +117,7 @@ where
     /// ```
     /// let x = linear_algebra::Matrix::from_diag(&[2, 3]);
     /// 
-    /// assert_eq!(x.get_values(), &[[2, 0], [0, 3]]);
+    /// assert_eq!(&[[2, 0], [0, 3]], x.get_values());
     /// ```
     pub fn from_diag(values: &[T; S]) -> Self {
         let mut use_values= [[T::zero(); S]; S];
@@ -148,7 +147,7 @@ where
     /// let x = linear_algebra::Matrix::new(&[[Complex::new(1, 0), Complex::new(0, 2)], [Complex::new(0, 3), Complex::new(0, 4)]]);
     /// let y = x.hermitian_conjugate();
     /// 
-    /// assert_eq!(y.get_values(), &[[Complex::new(1, 0), Complex::new(0, -3)], [Complex::new(0, -2), Complex::new(0, -4)]])
+    /// assert_eq!(&[[Complex::new(1, 0), Complex::new(0, -3)], [Complex::new(0, -2), Complex::new(0, -4)]], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> Matrix<Complex<T>, C, R> {
         let values: [[Complex<T>; R]; C] = 
@@ -177,13 +176,13 @@ where
     /// ```
     /// let x = linear_algebra::Matrix::new(&[[0, 1], [1, 2]]);
     /// 
-    /// assert_eq!(x.is_symmetric(), true);
+    /// assert_eq!(true, x.is_symmetric());
     /// ```
     /// 
     /// ```
     /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 1]]);
     /// 
-    /// assert_eq!(x.is_symmetric(), false);
+    /// assert_eq!(false, x.is_symmetric());
     /// ```
     pub fn is_symmetric(&self) -> bool {
         (0..S).any(|r| (0..r+1).any(|c| self[r][c] != self[c][r])) ^ true
@@ -205,7 +204,7 @@ where
     /// 
     /// let x = linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
     /// 
-    /// assert_eq!(x.is_hermitian(), true);
+    /// assert_eq!(true, x.is_hermitian());
     /// ```
     /// 
     /// ```
@@ -213,7 +212,7 @@ where
     /// 
     /// let x = linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
     /// 
-    /// assert_eq!(x.is_hermitian(), false);
+    /// assert_eq!(false, x.is_hermitian());
     /// ```
     pub fn is_hermitian(&self) -> bool {
         (0..S).any(|r| (0..r+1).any(|c| self[r][c] != self[c][r].conj())) ^ true
