@@ -1,3 +1,5 @@
+//! Implementation and all methods on column vectors
+
 use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul, MulAssign};
 use num::{traits::{Zero, Num}, Complex};
 use std::iter::Sum;
@@ -26,7 +28,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1, 2]);
     /// 
     /// assert_eq!(&[0, 1, 2], x.get_values());
     /// ```
@@ -39,7 +41,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::<f32, 2>::from_value(1.);
+    /// let x = static_linear_algebra::VectorColumn::<f32, 2>::from_value(1.);
     /// 
     /// assert_eq!(&[1., 1.], x.get_values());
     /// ```
@@ -52,7 +54,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
     /// let data = x.get_values();
     /// 
     /// assert_eq!(&[0, 1], data);
@@ -66,7 +68,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
     /// let data = x.get_values_mut();
     /// data[0] = 5;
     /// 
@@ -81,7 +83,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1, 2]);
     /// let y = x.transpose();
     /// 
     /// assert_eq!(&[0, 1, 2], y.get_values());
@@ -105,7 +107,7 @@ where
     /// ```
     /// use num::Complex;
     /// 
-    /// let x = linear_algebra::VectorColumn::new(&[Complex::new(1, 0), Complex::new(0, 2)]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[Complex::new(1, 0), Complex::new(0, 2)]);
     /// let y = x.hermitian_conjugate();
     /// 
     /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
@@ -205,8 +207,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
     /// 
     /// let z = x + y;
     /// 
@@ -233,8 +235,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
     /// 
     /// x += y;
     /// 
@@ -264,8 +266,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
     /// 
     /// let z = x - y;
     /// 
@@ -292,8 +294,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
     /// 
     /// x -= y;
     /// 
@@ -324,8 +326,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
     /// 
     /// let z = x * y;
     /// 
@@ -351,8 +353,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = linear_algebra::VectorRow::new(&[10, 20]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let y = static_linear_algebra::VectorRow::new(&[10, 20]);
     /// 
     /// let z = x * y;
     /// 
@@ -388,7 +390,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
     /// let y = 10;
     /// 
     /// let z = x * y;
@@ -417,7 +419,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
     /// let y = 10;
     /// 
     /// x *= y;

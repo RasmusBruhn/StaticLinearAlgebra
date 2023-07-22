@@ -1,3 +1,5 @@
+//! Implementation and all methods on matrices
+
 use std::ops::{Index, IndexMut, Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
 use num::{traits::{Zero, Num}, Complex};
 use itertools::Itertools;
@@ -29,7 +31,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
     /// 
     /// assert_eq!(&[[0, 1, 2], [3, 4, 5]], x.get_values());
     /// ```
@@ -42,7 +44,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::<f32, 2, 2>::from_value(1.);
+    /// let x = static_linear_algebra::Matrix::<f32, 2, 2>::from_value(1.);
     /// 
     /// assert_eq!(&[[1., 1.], [1., 1.]], x.get_values());
     /// ```
@@ -55,7 +57,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
     /// let data = x.get_values();
     /// 
     /// assert_eq!(&[[0, 1], [2, 3]], data);
@@ -69,7 +71,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let mut x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
     /// let data = x.get_values_mut();
     /// data[0][1] = 5;
     /// 
@@ -84,7 +86,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1, 2], [3, 4, 5]]);
     /// let y = x.transpose();
     /// 
     /// assert_eq!(&[[0, 3], [1, 4], [2, 5]], y.get_values());
@@ -115,7 +117,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::from_diag(&[2, 3]);
+    /// let x = static_linear_algebra::Matrix::from_diag(&[2, 3]);
     /// 
     /// assert_eq!(&[[2, 0], [0, 3]], x.get_values());
     /// ```
@@ -144,7 +146,7 @@ where
     /// ```
     /// use num::Complex;
     /// 
-    /// let x = linear_algebra::Matrix::new(&[[Complex::new(1, 0), Complex::new(0, 2)], [Complex::new(0, 3), Complex::new(0, 4)]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[Complex::new(1, 0), Complex::new(0, 2)], [Complex::new(0, 3), Complex::new(0, 4)]]);
     /// let y = x.hermitian_conjugate();
     /// 
     /// assert_eq!(&[[Complex::new(1, 0), Complex::new(0, -3)], [Complex::new(0, -2), Complex::new(0, -4)]], y.get_values())
@@ -174,13 +176,13 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [1, 2]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [1, 2]]);
     /// 
     /// assert_eq!(true, x.is_symmetric());
     /// ```
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 1]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 1]]);
     /// 
     /// assert_eq!(false, x.is_symmetric());
     /// ```
@@ -202,7 +204,7 @@ where
     /// ```
     /// use num::Complex;
     /// 
-    /// let x = linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
     /// 
     /// assert_eq!(true, x.is_hermitian());
     /// ```
@@ -210,7 +212,7 @@ where
     /// ```
     /// use num::Complex;
     /// 
-    /// let x = linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
     /// 
     /// assert_eq!(false, x.is_hermitian());
     /// ```
@@ -304,8 +306,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
     /// 
     /// let z = x + y;
     /// 
@@ -337,8 +339,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// let mut x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
     /// 
     /// x += y;
     /// 
@@ -373,8 +375,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
     /// 
     /// let z = x - y;
     /// 
@@ -406,8 +408,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// let mut x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
     /// 
     /// x -= y;
     /// 
@@ -443,8 +445,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
     /// 
     /// let z = x * y;
     /// 
@@ -481,8 +483,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
     /// 
     /// let z = x * y;
     /// 
@@ -510,8 +512,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// let mut x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
     /// 
     /// x *= y;
     /// 
@@ -548,7 +550,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
     /// let y = 10;
     /// 
     /// let z = x * y;
@@ -582,7 +584,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let mut x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
     /// let y = 10;
     /// 
     /// x *= y;

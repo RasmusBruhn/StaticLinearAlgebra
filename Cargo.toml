@@ -1,10 +1,12 @@
 [package]
-name = "linear_algebra"
+name = "static_linear_algebra"
 version = "0.1.0"
 edition = "2021"
+desciption = "A static linear algebra library where size compatibility of operations are checked at compile time"
+license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-itertools = "0.10.5"
+itertools = "0.11.0"
 num = "0.4.0"
