@@ -259,7 +259,7 @@ where
 {
     type Output = VectorColumn<TO, S>;
 
-    /// Normal elementwise subtraction of two matrices
+    /// Normal elementwise subtraction of two column vectors
     /// 
     /// # Examples
     /// 
@@ -287,7 +287,7 @@ where
     TL: Sub<TR, Output = TL>,
     TR: Copy,
 {
-    /// Normal elementwise subtraction of two matrices
+    /// Normal elementwise subtraction of two column vectors
     /// 
     /// # Examples
     /// 
