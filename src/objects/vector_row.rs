@@ -1,10 +1,30 @@
 //! Implementation and all methods on row vectors
 
-use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul, MulAssign};
-use num::{traits::{Zero, Num}, Complex};
-use std::iter::Sum;
+use std::{
+    ops::{
+        Index,
+        IndexMut,
+        Add,
+        Sub,
+        AddAssign,
+        SubAssign,
+        Mul,
+        MulAssign,
+    },
+    iter::Sum,
+};
+use num::{
+    traits::{
+        Zero,
+        Num,
+    },
+    Complex,
+};
 use core::ops::Neg;
-use super::{Matrix, VectorColumn};
+use super::{
+    Matrix,
+    VectorColumn,
+};
 
 /// A static row vector type
 /// 
@@ -33,7 +53,9 @@ where
     /// assert_eq!(&[0, 1, 2], x.get_values());
     /// ```
     pub fn new(values: &[T; S]) -> Self {
-        Self {values: *values}
+        Self {
+            values: *values
+        }
     }
 
     /// Initializes a new row vector filled with a single value
@@ -46,7 +68,9 @@ where
     /// assert_eq!(&[1., 1.], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
-        Self {values: [value; S]}
+        Self {
+            values: [value; S]
+        }
     }
 
     /// Retrieves a reference to the data of the row vector
@@ -113,7 +137,7 @@ where
     /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> VectorColumn<Complex<T>, S> {
-        let values: [Complex<T>; S] = match (0..S).map(|i| self[i].conj()).collect::<Vec<Complex<T>>>().try_into() {
+        let values: [Complex<T>; S] = match (0..S).map(|i| self.values[i].conj()).collect::<Vec<Complex<T>>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -153,7 +177,7 @@ where
     }
 
     fn is_zero(&self) -> bool {
-        (0..S).any(|i| self[i] != T::zero()) ^ true
+        (0..S).all(|i| self.values[i] == T::zero())
     }
 }
 
@@ -168,7 +192,7 @@ where
         let mut result: Self = VectorRow::zero();
 
         for value in iter {
-            result = result + value;
+            result += value;
         }
 
         result
@@ -186,7 +210,7 @@ where
         let mut result: Self = VectorRow::zero();
 
         for value in iter {
-            result = result + *value;
+            result += *value;
         }
 
         result
@@ -215,7 +239,7 @@ where
     /// assert_eq!(&[0, 11], z.get_values());
     /// ```
     fn add(self, rhs: VectorRow<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self[i] + rhs[i]).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S).map(|i| self.values[i] + rhs.values[i]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -224,11 +248,10 @@ where
     }
 }
 
-impl<TL, TR, const S: usize> AddAssign<VectorRow<TR, S>> for VectorRow<TL, S>
+impl<T, const S: usize> AddAssign<VectorRow<T, S>> for VectorRow<T, S>
 where
-    TL: Copy,
-    TL: Add<TR, Output = TL>,
-    TR: Copy,
+    T: Copy,
+    T: Add<T, Output = T>,
 {
     /// Normal elementwise addition of two row vectors
     /// 
@@ -242,8 +265,8 @@ where
     /// 
     /// assert_eq!(&[0, 11], x.get_values());
     /// ```
-    fn add_assign(&mut self, rhs: VectorRow<TR, S>) {
-        let values: [TL; S] = match (0..S).map(|i| self[i] + rhs[i]).collect::<Vec<TL>>().try_into() {
+    fn add_assign(&mut self, rhs: VectorRow<T, S>) {
+        let values: [T; S] = match (0..S).map(|i| self.values[i] + rhs.values[i]).collect::<Vec<T>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -274,7 +297,7 @@ where
     /// assert_eq!(&[0, -9], z.get_values());
     /// ```
     fn sub(self, rhs: VectorRow<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self[i] - rhs[i]).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S).map(|i| self.values[i] - rhs.values[i]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -283,11 +306,10 @@ where
     }
 }
 
-impl<TL, TR, const S: usize> SubAssign<VectorRow<TR, S>> for VectorRow<TL, S>
+impl<T, const S: usize> SubAssign<VectorRow<T, S>> for VectorRow<T, S>
 where
-    TL: Copy,
-    TL: Sub<TR, Output = TL>,
-    TR: Copy,
+    T: Copy,
+    T: Sub<T, Output = T>,
 {
     /// Normal elementwise subtraction of two row vectors
     /// 
@@ -301,8 +323,8 @@ where
     /// 
     /// assert_eq!(&[0, -9], x.get_values());
     /// ```
-    fn sub_assign(&mut self, rhs: VectorRow<TR, S>) {
-        let values: [TL; S] = match (0..S).map(|i| self[i] - rhs[i]).collect::<Vec<TL>>().try_into() {
+    fn sub_assign(&mut self, rhs: VectorRow<T, S>) {
+        let values: [T; S] = match (0..S).map(|i| self.values[i] - rhs.values[i]).collect::<Vec<T>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -334,7 +356,7 @@ where
     /// assert_eq!(10, z);
     /// ```
     fn mul(self, rhs: VectorRow<TR, S>) -> Self::Output {
-        (0..S).map(|i| self[i] * rhs[i]).sum()
+        (0..S).map(|i| self.values[i] * rhs.values[i]).sum()
     }
 }
 
@@ -361,7 +383,7 @@ where
     /// assert_eq!(20, z);
     /// ```
     fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        (0..S).map(|i| self[i] * rhs[i]).sum()
+        (0..S).map(|i| self.values[i] * rhs.values[i]).sum()
     }
 }
 
@@ -388,7 +410,7 @@ where
     /// assert_eq!(&[30, 40, 50], z.get_values());
     /// ```
     fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [TO; C] = match (0..C).map(|c| (0..R).map(|r| self[r] * rhs[r][c]).sum()).collect::<Vec<TO>>().try_into() {
+        let values: [TO; C] = match (0..C).map(|c| (0..R).map(|r| self.values[r] * rhs.values[r][c]).sum()).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -420,7 +442,7 @@ where
     /// assert_eq!(&[0, 10], z.get_values());
     /// ```
     fn mul(self, rhs: TR) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S).map(|i| self.values[i] * rhs).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -429,12 +451,11 @@ where
     }
 }
 
-impl<TL, TR, const S: usize> MulAssign<TR> for VectorRow<TL, S>
+impl<T, const S: usize> MulAssign<T> for VectorRow<T, S>
 where
-    TL: Copy,
-    TL: Mul<TR, Output = TL>,
-    TR: Copy,
-    TR: Num,
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Num,
 {
     /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
     /// 
@@ -448,8 +469,8 @@ where
     /// 
     /// assert_eq!(&[0, 10], x.get_values());
     /// ```
-    fn mul_assign(&mut self, rhs: TR) {
-        let values: [TL; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TL>>().try_into() {
+    fn mul_assign(&mut self, rhs: T) {
+        let values: [T; S] = match (0..S).map(|i| self.values[i] * rhs).collect::<Vec<T>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -457,64 +478,6 @@ where
         self.values = values;
     }
 }
-
-macro_rules! dot_method {
-    ($TL:ty) => {
-        impl<TR, TO, const S: usize> Mul<VectorRow<TR, S>> for $TL
-        where
-            $TL: Mul<TR, Output = TO>,
-            TR: Copy,
-            TO: Copy,
-        {
-            type Output = VectorRow<TO, S>;
-
-            /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
-            fn mul(self, rhs: VectorRow<TR, S>) -> Self::Output {
-                let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
-                    Ok(result) => result,
-                    Err(_) => panic!("Should not happen"),
-                };
-
-                Self::Output {values}
-            }
-        }
-    };
-}
-
-impl<T, TR, TO, const S: usize> Mul<VectorRow<TR, S>> for Complex<T>
-where
-    Complex<T>: Copy,
-    Complex<T>: Mul<TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
-{
-    type Output = VectorRow<TO, S>;
-
-    /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
-    fn mul(self, rhs: VectorRow<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        Self::Output {values}
-    }
-}
-
-dot_method!(u8);
-dot_method!(u16);
-dot_method!(u32);
-dot_method!(u64);
-dot_method!(u128);
-dot_method!(usize);
-dot_method!(i8);
-dot_method!(i16);
-dot_method!(i32);
-dot_method!(i64);
-dot_method!(i128);
-dot_method!(isize);
-dot_method!(f32);
-dot_method!(f64);
 
 #[cfg(test)]
 mod tests {
@@ -644,7 +607,7 @@ mod tests {
     }
 
     #[test]
-    fn scalar_mul_right() {
+    fn scalar_mul() {
         let vector = VectorRow::new(&[0, 1, 2]);
         let result = vector * 5;
         assert_eq!([0, 5, 10], result.values);
@@ -655,39 +618,6 @@ mod tests {
         let mut vector = VectorRow::new(&[0, 1, 2]);
         vector *= 5;
         assert_eq!([0, 5, 10], vector.values);
-    }
-
-    macro_rules! dot_method_test {
-        ($T:ty, $name:ident) => {
-            #[test]
-            fn $name() {
-                let vector: VectorRow<$T, 3> = VectorRow::new(&[0 as $T, 1 as $T, 2 as $T]);
-                let result = (4 as $T) * vector;
-                assert_eq!([0 as $T, 4 as $T, 8 as $T], result.values);    
-            }
-        };
-    }
-
-    dot_method_test!(u8, scalar_mul_left_u8);
-    dot_method_test!(u16, scalar_mul_left_u16);
-    dot_method_test!(u32, scalar_mul_left_u32);
-    dot_method_test!(u64, scalar_mul_left_u64);
-    dot_method_test!(u128, scalar_mul_left_u128);
-    dot_method_test!(usize, scalar_mul_left_usize);
-    dot_method_test!(i8, scalar_mul_left_i8);
-    dot_method_test!(i16, scalar_mul_left_i16);
-    dot_method_test!(i32, scalar_mul_left_i32);
-    dot_method_test!(i64, scalar_mul_left_i64);
-    dot_method_test!(i128, scalar_mul_left_i128);
-    dot_method_test!(isize, scalar_mul_left_isize);
-    dot_method_test!(f32, scalar_mul_left_f32);
-    dot_method_test!(f64, scalar_mul_left_f64);
-
-    #[test]
-    fn scalar_mul_left_complex() {
-        let vector = VectorRow::new(&[Complex::new(0., 0.), Complex::new(1., 0.), Complex::new(0., 1.)]);
-        let result = Complex::new(0., 4.) * vector;
-        assert_eq!([Complex::new(0., 0.), Complex::new(0., 4.), Complex::new(-4., 0.)], result.values);    
     }
 
     #[test]

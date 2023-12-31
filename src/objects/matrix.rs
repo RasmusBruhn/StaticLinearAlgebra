@@ -1,9 +1,29 @@
-//! Implementation and all methods on matrices
+//! Implementation of and all methods on matrices
 
-use std::ops::{Index, IndexMut, Add, Sub, Mul, AddAssign, SubAssign, MulAssign};
-use num::{traits::{Zero, Num}, Complex};
-use itertools::Itertools;
-use std::iter::Sum;
+use std::{
+    ops::{
+        Index,
+        IndexMut,
+        Add,
+        Sub,
+        Mul,
+        AddAssign,
+        SubAssign,
+        MulAssign,
+    },
+    iter::{
+        Sum,
+        Product,
+    },
+};
+use num::{
+    traits::{
+        Zero,
+        One,
+        Num,
+    },
+    Complex,
+};
 use core::ops::Neg;
 use super::vector_column::VectorColumn;
 
@@ -36,7 +56,9 @@ where
     /// assert_eq!(&[[0, 1, 2], [3, 4, 5]], x.get_values());
     /// ```
     pub fn new(values: &[[T; C]; R]) -> Self {
-        Self {values: *values}
+        Self {
+            values: *values
+        }
     }
 
     /// Initializes a new matrix filled with a single value
@@ -49,7 +71,9 @@ where
     /// assert_eq!(&[[1., 1.], [1., 1.]], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
-        Self {values: [[value; C]; R]}
+        Self {
+            values: [[value; C]; R]
+        }
     }
 
     /// Retrieves a reference to the data of the matrix
@@ -94,7 +118,7 @@ where
     pub fn transpose(&self) -> Matrix<T, C, R> {
         let values: [[T; R]; C] = 
             match (0..C).map(|r| 
-            match (0..R).map(|c| self[c][r]).collect::<Vec<T>>().try_into() {
+            match (0..R).map(|c| self.values[c][r]).collect::<Vec<T>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         }).collect::<Vec<[T; R]>>().try_into() {
@@ -102,7 +126,9 @@ where
             Err(_) => panic!("Should not happen"),
         };
 
-        Matrix {values}
+        Matrix {
+            values
+        }
     }
 }
 
@@ -128,7 +154,37 @@ where
             use_values[n][n] = *value;
         }
 
-        Self {values: use_values}
+        Self {
+            values: use_values
+        }
+    }
+}
+
+impl<T, const S: usize> Matrix<T, S, S>
+where
+    T: Copy,
+    T: Zero,
+    T: One,
+{
+    /// Initializes a diagonal matrix where the diagonal contains ones
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = static_linear_algebra::Matrix::<i32, 3, 3>::identity();
+    /// 
+    /// assert_eq!(&[[1, 0, 0], [0, 1, 0], [0, 0, 1]], x.get_values());
+    /// ```
+    pub fn identity() -> Self {
+        let mut use_values= [[T::zero(); S]; S];
+        
+        for n in 0..S {
+            use_values[n][n] = T::one();
+        }
+
+        Self {
+            values: use_values
+        }
     }
 }
 
@@ -154,7 +210,7 @@ where
     pub fn hermitian_conjugate(&self) -> Matrix<Complex<T>, C, R> {
         let values: [[Complex<T>; R]; C] = 
             match (0..C).map(|r| 
-            match (0..R).map(|c| self[c][r].conj()).collect::<Vec<Complex<T>>>().try_into() {
+            match (0..R).map(|c| self.values[c][r].conj()).collect::<Vec<Complex<T>>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         }).collect::<Vec<[Complex<T>; R]>>().try_into() {
@@ -187,7 +243,11 @@ where
     /// assert_eq!(false, x.is_symmetric());
     /// ```
     pub fn is_symmetric(&self) -> bool {
-        (0..S).any(|r| (0..r+1).any(|c| self[r][c] != self[c][r])) ^ true
+        (0..S)
+            .all(|r| {
+                (0..r + 1)
+                    .all(|c| self.values[r][c] == self.values[c][r])
+            })
     }
 }
 
@@ -217,7 +277,10 @@ where
     /// assert_eq!(false, x.is_hermitian());
     /// ```
     pub fn is_hermitian(&self) -> bool {
-        (0..S).any(|r| (0..r+1).any(|c| self[r][c] != self[c][r].conj())) ^ true
+        (0..S)
+            .all(|r| {
+                (0..r + 1).all(|c| self.values[r][c] == self.values[c][r].conj())
+            })
     }
 }
 
@@ -252,7 +315,26 @@ where
     }
 
     fn is_zero(&self) -> bool {
-        (0..R).cartesian_product(0..C).any(|(r, c)| self[r][c] != T::zero()) ^ true
+        self.values
+            .iter()
+            .all(|column| {
+                column
+                    .iter()
+                    .all(|value| *value == T::zero())
+            })
+    }
+}
+
+impl<T, const C: usize> One for Matrix<T, C, C>
+where
+    T: Copy,
+    T: Zero,
+    T: One,
+    T: Mul,
+    T: Sum,
+{
+    fn one() -> Self {
+        Self::identity()
     }
 }
 
@@ -267,7 +349,7 @@ where
         let mut result: Self = Matrix::zero();
 
         for value in iter {
-            result = result + value;
+            result += value;
         }
 
         result
@@ -285,7 +367,45 @@ where
         let mut result: Self = Matrix::zero();
 
         for value in iter {
-            result = result + *value;
+            result += *value;
+        }
+
+        result
+    }
+}
+
+impl<T, const C: usize> Product for Matrix<T, C, C>
+where
+    T: Copy,
+    T: Zero,
+    T: One,
+    T: Mul<T, Output = T>,
+    T: Sum,
+{
+    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+        let mut result: Self = Matrix::one();
+
+        for value in iter {
+            result *= value;
+        }
+
+        result
+    }
+}
+
+impl<'a, T, const C: usize> Product<&'a Matrix<T, C, C>> for Matrix<T, C, C>
+where
+    T: Copy,
+    T: Zero,
+    T: One,
+    T: Mul<T, Output = T>,
+    T: Sum,
+{
+    fn product<I: Iterator<Item = &'a Matrix<T, C, C>>>(iter: I) -> Self {
+        let mut result: Self = Matrix::one();
+
+        for value in iter {
+            result *= *value;
         }
 
         result
@@ -314,25 +434,36 @@ where
     /// assert_eq!(&[[0, 11], [22, 33]], z.get_values());
     /// ```
     fn add(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] + rhs[r][c]).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+        let values: [[TO; C]; R] = match self.values
+            .iter()
+            .zip(rhs.values.iter())
+            .map(|(c_lhs, c_rhs)| {
+                match c_lhs
+                    .iter()
+                    .zip(c_rhs.iter())
+                    .map(|(lhs, rhs)| *lhs + *rhs)
+                    .collect::<Vec<TO>>()
+                    .try_into() {
+                        Ok(result) => result,
+                        Err(_) => panic!("Should not happen"),
+                    }
+            })
+            .collect::<Vec<[TO; C]>>()
+            .try_into() {
+                Ok(result) => result,
+                Err(_) => panic!("Should not happen"),
+            };
 
-        Self::Output {values}
+        Self::Output {
+            values
+        }
     }
 }
 
-impl<TL, TR, const R: usize, const C: usize> AddAssign<Matrix<TR, R, C>> for Matrix<TL, R, C>
+impl<T, const R: usize, const C: usize> AddAssign<Matrix<T, R, C>> for Matrix<T, R, C>
 where
-    TL: Copy,
-    TL: Add<TR, Output = TL>,
-    TR: Copy,
+    T: Copy,
+    T: Add<T, Output = T>,
 {
     /// Normal elementwise addition of two matrices
     /// 
@@ -346,18 +477,9 @@ where
     /// 
     /// assert_eq!(&[[0, 11], [22, 33]], x.get_values());
     /// ```
-    fn add_assign(&mut self, rhs: Matrix<TR, R, C>) {
-        let values: [[TL; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] + rhs[r][c]).collect::<Vec<TL>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TL; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        self.values = values;
+    fn add_assign(&mut self, rhs: Matrix<T, R, C>) {
+        let result = *self + rhs;
+        self.values = result.values;
     }
 }
 
@@ -383,25 +505,36 @@ where
     /// assert_eq!(&[[0, -9], [-18, -27]], z.get_values());
     /// ```
     fn sub(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] - rhs[r][c]).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+        let values: [[TO; C]; R] = match self.values
+            .iter()
+            .zip(rhs.values.iter())
+            .map(|(c_lhs, c_rhs)| {
+                match c_lhs
+                    .iter()
+                    .zip(c_rhs.iter())
+                    .map(|(lhs, rhs)| *lhs - *rhs)
+                    .collect::<Vec<TO>>()
+                    .try_into() {
+                        Ok(result) => result,
+                        Err(_) => panic!("Should not happen"),
+                    }
+            })
+            .collect::<Vec<[TO; C]>>()
+            .try_into() {
+                Ok(result) => result,
+                Err(_) => panic!("Should not happen"),
+            };
 
-        Self::Output {values}
+        Self::Output {
+            values
+        }
     }
 }
 
-impl<TL, TR, const R: usize, const C: usize> SubAssign<Matrix<TR, R, C>> for Matrix<TL, R, C>
+impl<T, const R: usize, const C: usize> SubAssign<Matrix<T, R, C>> for Matrix<T, R, C>
 where
-    TL: Copy,
-    TL: Sub<TR, Output = TL>,
-    TR: Copy,
+    T: Copy,
+    T: Sub<T, Output = T>,
 {
     /// Normal elementwise subtraction of two matrices
     /// 
@@ -415,18 +548,9 @@ where
     /// 
     /// assert_eq!(&[[0, -9], [-18, -27]], x.get_values());
     /// ```
-    fn sub_assign(&mut self, rhs: Matrix<TR, R, C>) {
-        let values: [[TL; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] - rhs[r][c]).collect::<Vec<TL>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TL; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        self.values = values;
+    fn sub_assign(&mut self, rhs: Matrix<T, R, C>) {
+        let result = *self - rhs;
+        self.values = result.values;
     }
 }
 
@@ -456,7 +580,7 @@ where
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
             match (0..C).map(|c| 
-            (0..K).map(|k| self[r][k] * rhs[k][c]).sum()).collect::<Vec<TO>>().try_into() {
+            (0..K).map(|k| self.values[r][k] * rhs.values[k][c]).sum()).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         }).collect::<Vec<[TO; C]>>().try_into() {
@@ -491,47 +615,12 @@ where
     /// assert_eq!(&[10, 30], z.get_values());
     /// ```
     fn mul(self, rhs: VectorColumn<TR, C>) -> Self::Output {
-        let values: [TO; R] = match (0..R).map(|r| (0..C).map(|c| self[r][c] * rhs[c]).sum()).collect::<Vec<TO>>().try_into() {
+        let values: [TO; R] = match (0..R).map(|r| (0..C).map(|c| self.values[r][c] * rhs.values[c]).sum()).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
         Self::Output {values}
-    }
-}
-
-impl<TL, TR, const S: usize> MulAssign<Matrix<TR, S, S>> for Matrix<TL, S, S>
-where
-    TL: Copy,
-    TL: Mul<TR, Output = TL>,
-    TL: Sum,
-    TR: Copy,
-{
-    /// Normal matrix multiplication
-    /// 
-    /// # Examples
-    /// 
-    /// ```
-    /// let mut x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
-    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
-    /// 
-    /// x *= y;
-    /// 
-    /// assert_eq!(&[[20, 30], [60, 110]], x.get_values());
-    /// ```
-    fn mul_assign(&mut self, rhs: Matrix<TR, S, S>) {
-        let values: [[TL; S]; S] = 
-            match (0..S).map(|r| 
-            match (0..S).map(|c| 
-            (0..S).map(|k| self[r][k] * rhs[k][c]).sum()).collect::<Vec<TL>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TL; S]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        self.values = values;
     }
 }
 
@@ -558,26 +647,59 @@ where
     /// assert_eq!(&[[0, 10], [20, 30]], z.get_values());
     /// ```
     fn mul(self, rhs: TR) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] * rhs).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+        let values: [[TO; C]; R] = match self.values
+            .iter()
+            .map(|column| {
+                match column
+                    .iter()
+                    .map(|value| *value * rhs)
+                    .collect::<Vec<TO>>()
+                    .try_into() {
+                        Ok(result) => result,
+                        Err(_) => panic!("Should not happen"),
+                    }
+            })
+            .collect::<Vec<[TO; C]>>()
+            .try_into() {
+                Ok(result) => result,
+                Err(_) => panic!("Should not happen"),
+            };
 
-        Self::Output {values}
+        Self::Output {
+            values
+        }
     }
 }
 
-impl<TL, TR, const R: usize, const C: usize> MulAssign<TR> for Matrix<TL, R, C>
+impl<T, const S: usize> MulAssign<Matrix<T, S, S>> for Matrix<T, S, S>
 where
-    TL: Copy,
-    TL: Mul<TR, Output = TL>,
-    TR: Copy,
-    TR: Num,
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Sum,
+{
+    /// Normal matrix multiplication
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let mut x = static_linear_algebra::Matrix::new(&[[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::new(&[[0, 10], [20, 30]]);
+    /// 
+    /// x *= y;
+    /// 
+    /// assert_eq!(&[[20, 30], [60, 110]], x.get_values());
+    /// ```
+    fn mul_assign(&mut self, rhs: Matrix<T, S, S>) {
+        let result = *self * rhs;
+        self.values = result.values;
+    }
+}
+
+impl<T, const R: usize, const C: usize> MulAssign<T> for Matrix<T, R, C>
+where
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Num,
 {
     /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
     /// 
@@ -591,88 +713,11 @@ where
     /// 
     /// assert_eq!(&[[0, 10], [20, 30]], x.get_values());
     /// ```
-    fn mul_assign(&mut self, rhs: TR) {
-        let values: [[TL; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| self[r][c] * rhs).collect::<Vec<TL>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TL; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        self.values = values;
+    fn mul_assign(&mut self, rhs: T) {
+        let result = *self * rhs;
+        self.values = result.values;
     }
 }
-
-macro_rules! dot_method {
-    ($TL:ty) => {
-        impl<TR, TO, const R: usize, const C: usize> Mul<Matrix<TR, R, C>> for $TL
-        where
-            $TL: Mul<TR, Output = TO>,
-            TR: Copy,
-            TO: Copy,
-        {
-            type Output = Matrix<TO, R, C>;
-
-            /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
-            fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-                let values: [[TO; C]; R] = 
-                    match (0..R).map(|r| 
-                    match (0..C).map(|c| self * rhs[r][c]).collect::<Vec<TO>>().try_into() {
-                    Ok(result) => result,
-                    Err(_) => panic!("Should not happen"),
-                }).collect::<Vec<[TO; C]>>().try_into() {
-                    Ok(result) => result,
-                    Err(_) => panic!("Should not happen"),
-                };
-
-                Self::Output {values}
-            }
-        }
-    };
-}
-
-impl<T, TR, TO, const R: usize, const C: usize> Mul<Matrix<TR, R, C>> for Complex<T>
-where
-    Complex<T>: Copy,
-    Complex<T>: Mul<TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
-{
-    type Output = Matrix<TO, R, C>;
-
-    /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
-    fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| self * rhs[r][c]).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        Self::Output {values}
-    }
-}
-
-dot_method!(u8);
-dot_method!(u16);
-dot_method!(u32);
-dot_method!(u64);
-dot_method!(u128);
-dot_method!(usize);
-dot_method!(i8);
-dot_method!(i16);
-dot_method!(i32);
-dot_method!(i64);
-dot_method!(i128);
-dot_method!(isize);
-dot_method!(f32);
-dot_method!(f64);
 
 #[cfg(test)]
 mod tests {
@@ -694,6 +739,12 @@ mod tests {
     fn from_diag() {
         let result = Matrix::from_diag(&[1, 2]);
         assert_eq!([[1, 0], [0, 2]], result.values);
+    }
+
+    #[test]
+    fn identity() {
+        let result = Matrix::<i32, 3, 3>::identity();
+        assert_eq!([[1, 0, 0], [0, 1, 0], [0, 0, 1]], result.values);
     }
 
     #[test]
@@ -758,8 +809,22 @@ mod tests {
     #[test]
     fn sum_ref() {
         let list: [Matrix<i32, 2, 2>; 3] = [Matrix::new(&[[0, 1], [2, 3]]), Matrix::new(&[[0, 10], [20, 30]]), Matrix::new(&[[0, 100], [200, 300]])];
-        let result: Matrix<i32, 2, 2> = list.iter().sum();
+        let result: Matrix<i32, 2, 2> = list.into_iter().sum();
         assert_eq!([[0, 111], [222, 333]], result.values);
+    }
+
+    #[test]
+    fn product() {
+        let list: [Matrix<i32, 2, 2>; 3] = [Matrix::new(&[[0, 1], [2, 3]]), Matrix::new(&[[4, 5], [6, 7]]), Matrix::new(&[[8, 9], [10, 11]])];
+        let result: Matrix<i32, 2, 2> = list.into_iter().product();
+        assert_eq!([[118, 131], [518, 575]], result.values);
+    }
+
+    #[test]
+    fn product_ref() {
+        let list: [Matrix<i32, 2, 2>; 3] = [Matrix::new(&[[0, 1], [2, 3]]), Matrix::new(&[[4, 5], [6, 7]]), Matrix::new(&[[8, 9], [10, 11]])];
+        let result: Matrix<i32, 2, 2> = list.iter().product();
+        assert_eq!([[118, 131], [518, 575]], result.values);
     }
 
     #[test]
@@ -819,7 +884,7 @@ mod tests {
     }
 
     #[test]
-    fn scalar_mul_right() {
+    fn scalar_mul() {
         let matrix = Matrix::new(&[[0, 1, 2]]);
         let result = matrix * 4;
         assert_eq!([[0, 4, 8]], result.values);    
@@ -830,39 +895,6 @@ mod tests {
         let mut matrix = Matrix::new(&[[0, 1, 2]]);
         matrix *= 4;
         assert_eq!([[0, 4, 8]], matrix.values);    
-    }
-
-    macro_rules! dot_method_test {
-        ($T:ty, $name:ident) => {
-            #[test]
-            fn $name() {
-                let matrix: Matrix<$T, 1, 3> = Matrix::new(&[[0 as $T, 1 as $T, 2 as $T]]);
-                let result = (4 as $T) * matrix;
-                assert_eq!([[0 as $T, 4 as $T, 8 as $T]], result.values);    
-            }
-        };
-    }
-
-    dot_method_test!(u8, scalar_mul_left_u8);
-    dot_method_test!(u16, scalar_mul_left_u16);
-    dot_method_test!(u32, scalar_mul_left_u32);
-    dot_method_test!(u64, scalar_mul_left_u64);
-    dot_method_test!(u128, scalar_mul_left_u128);
-    dot_method_test!(usize, scalar_mul_left_usize);
-    dot_method_test!(i8, scalar_mul_left_i8);
-    dot_method_test!(i16, scalar_mul_left_i16);
-    dot_method_test!(i32, scalar_mul_left_i32);
-    dot_method_test!(i64, scalar_mul_left_i64);
-    dot_method_test!(i128, scalar_mul_left_i128);
-    dot_method_test!(isize, scalar_mul_left_isize);
-    dot_method_test!(f32, scalar_mul_left_f32);
-    dot_method_test!(f64, scalar_mul_left_f64);
-
-    #[test]
-    fn scalar_mul_left_complex() {
-        let matrix = Matrix::new(&[[Complex::new(0., 0.), Complex::new(1., 0.), Complex::new(0., 1.)]]);
-        let result = Complex::new(0., 4.) * matrix;
-        assert_eq!([[Complex::new(0., 0.), Complex::new(0., 4.), Complex::new(-4., 0.)]], result.values);    
     }
 
     #[test]
