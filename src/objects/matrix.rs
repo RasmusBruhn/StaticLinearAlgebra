@@ -56,6 +56,9 @@ where
     /// assert_eq!(&[[0, 1, 2], [3, 4, 5]], x.get_values());
     /// ```
     pub fn new(values: &[[T; C]; R]) -> Self {
+        assert_ne!(C, 0);
+        assert_ne!(R, 0);
+
         Self {
             values: *values
         }
@@ -71,6 +74,9 @@ where
     /// assert_eq!(&[[1., 1.], [1., 1.]], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
+        assert_ne!(C, 0);
+        assert_ne!(R, 0);
+
         Self {
             values: [[value; C]; R]
         }
@@ -148,6 +154,8 @@ where
     /// assert_eq!(&[[2, 0], [0, 3]], x.get_values());
     /// ```
     pub fn from_diag(values: &[T; S]) -> Self {
+        assert_ne!(S, 0);
+
         let mut use_values= [[T::zero(); S]; S];
         
         for (n, value) in values.iter().enumerate() {
@@ -176,6 +184,8 @@ where
     /// assert_eq!(&[[1, 0, 0], [0, 1, 0], [0, 0, 1]], x.get_values());
     /// ```
     pub fn identity() -> Self {
+        assert_ne!(S, 0);
+
         let mut use_values= [[T::zero(); S]; S];
         
         for n in 0..S {
@@ -282,6 +292,120 @@ where
                 (0..r + 1).all(|c| self.values[r][c] == self.values[c][r].conj())
             })
     }
+}
+
+impl<T, const S: usize> Matrix<T, S, S> 
+where
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Sum,
+    T: Add<Output = T>,
+    T: Sub<Output = T>,
+    T: Neg<Output = T>,
+{
+    /// Calculates the determinant for the matrix
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = static_linear_algebra::Matrix::new(&[[1.0, 2.0], [3.0, 4.0]]);
+    /// 
+    /// assert_eq!(x.determinant(), -2.0)
+    /// ```
+    pub fn determinant(&self) -> T {
+        assert_ne!(S, 0);
+
+        match S {
+            1 => {
+                self.values[0][0]
+            }
+            2 => {
+                self.values[0][0] * self.values[1][1] - self.values[0][1] * self.values[1][0]
+            }
+            3 => {
+                self.values[0][0] * (self.values[1][1] * self.values[2][2] - self.values[1][2] * self.values[2][1]) -
+                self.values[0][1] * (self.values[1][0] * self.values[2][2] - self.values[1][2] * self.values[2][0]) +
+                self.values[0][2] * (self.values[1][0] * self.values[2][1] - self.values[1][1] * self.values[2][0])
+            }
+            4 => {
+                self.values[0][0] * (
+                    self.values[1][1] * (self.values[2][2] * self.values[3][3] - self.values[2][3] * self.values[3][2]) -
+                    self.values[1][2] * (self.values[2][1] * self.values[3][3] - self.values[2][3] * self.values[3][1]) +
+                    self.values[1][3] * (self.values[2][1] * self.values[3][2] - self.values[2][2] * self.values[3][1])
+                ) -
+                self.values[0][1] * (
+                    self.values[1][0] * (self.values[2][2] * self.values[3][3] - self.values[2][3] * self.values[3][2]) -
+                    self.values[1][2] * (self.values[2][0] * self.values[3][3] - self.values[2][3] * self.values[3][0]) +
+                    self.values[1][3] * (self.values[2][0] * self.values[3][2] - self.values[2][2] * self.values[3][0])
+                ) +
+                self.values[0][2] * (
+                    self.values[1][0] * (self.values[2][1] * self.values[3][3] - self.values[2][3] * self.values[3][1]) -
+                    self.values[1][1] * (self.values[2][0] * self.values[3][3] - self.values[2][3] * self.values[3][0]) +
+                    self.values[1][3] * (self.values[2][0] * self.values[3][1] - self.values[2][1] * self.values[3][0])
+                ) -
+                self.values[0][3] * (
+                    self.values[1][0] * (self.values[2][1] * self.values[3][2] - self.values[2][2] * self.values[3][1]) -
+                    self.values[1][1] * (self.values[2][0] * self.values[3][2] - self.values[2][2] * self.values[3][0]) +
+                    self.values[1][2] * (self.values[2][0] * self.values[3][1] - self.values[2][1] * self.values[3][0])
+                )
+            }
+            _ => determinant_step(&self.values, &[true; S]),
+        }
+    }
+}
+
+fn determinant_step<T, const S: usize>(data: &[[T; S]], unused: &[bool; S]) -> T
+where
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Sum,
+    T: Neg<Output = T>,
+{
+    // Run through the first row and multiply unused values by subdeterminants of the next rows
+    data[0]
+        .iter()
+        .enumerate()
+        .zip(unused.iter())
+        .filter_map(|(value, &keep)| {
+            if keep {
+                Some(value)
+            } else {
+                None
+            }
+        })
+        .enumerate()
+        .map(|(sign, (location, &value))| {
+            if data.len() <= 1 {
+                // Just return the value
+                value
+            } else {
+                // Remove the current column from the unused columns list
+                let new_unused: [bool; S] = unused
+                    .iter()
+                    .enumerate()
+                    .map(|(keep_location, &keep)| {
+                        if keep_location == location {
+                            false
+                        } else {
+                            keep
+                        }
+                    })
+                    .collect::<Vec<bool>>()
+                    .try_into()
+                    .unwrap();
+
+                // Calculate the sub determinant
+                let sub_det_value = determinant_step(&data[1..], &new_unused);
+
+                // Make sure the sign alternates
+                if sign % 2 == 0 {
+                    value * sub_det_value
+                } else {
+                    -value * sub_det_value
+                }
+            }
+        })
+        .sum::<T>()
 }
 
 impl<T, const R: usize, const C: usize> Index<usize> for Matrix<T, R, C> 
@@ -925,5 +1049,10 @@ mod tests {
         let matrix2 = Matrix::new(&[[0, 1], [2, 1]]);
         assert_eq!(true, matrix1.is_symmetric());
         assert_eq!(false, matrix2.is_symmetric());
+    }
+
+    #[test]
+    fn determinant() {
+        let matrix1 = Matrix::new(&[[]])
     }
 }
