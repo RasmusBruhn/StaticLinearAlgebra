@@ -1,10 +1,30 @@
 //! Implementation and all methods on column vectors
 
-use std::ops::{Index, IndexMut, Add, Sub, AddAssign, SubAssign, Mul, MulAssign};
-use num::{traits::{Zero, Num}, Complex};
-use std::iter::Sum;
+use std::{
+    ops::{
+        Index,
+        IndexMut,
+        Add,
+        Sub,
+        AddAssign,
+        SubAssign,
+        Mul,
+        MulAssign,
+    },
+    iter::Sum,
+};
+use num::{
+    traits::{
+        Zero,
+        Num,
+    },
+    Complex,
+};
 use core::ops::Neg;
-use super::{Matrix, VectorRow};
+use super::{
+    Matrix,
+    VectorRow,
+};
 
 /// A static column vector type
 /// 
@@ -28,12 +48,16 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1, 2]);
     /// 
     /// assert_eq!(&[0, 1, 2], x.get_values());
     /// ```
-    pub fn new(values: &[T; S]) -> Self {
-        Self {values: *values}
+    pub fn new(values: [T; S]) -> Self {
+        assert_ne!(S, 0);
+
+        Self {
+            values
+        }
     }
 
     /// Initializes a new column vector filled with a single value
@@ -46,7 +70,11 @@ where
     /// assert_eq!(&[1., 1.], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
-        Self {values: [value; S]}
+        assert_ne!(S, 0);
+
+        Self {
+            values: [value; S]
+        }
     }
 
     /// Retrieves a reference to the data of the column vector
@@ -54,7 +82,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let data = x.get_values();
     /// 
     /// assert_eq!(&[0, 1], data);
@@ -68,7 +96,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let data = x.get_values_mut();
     /// data[0] = 5;
     /// 
@@ -83,13 +111,15 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1, 2]);
     /// let y = x.transpose();
     /// 
     /// assert_eq!(&[0, 1, 2], y.get_values());
     /// ```
     pub fn transpose(&self) -> VectorRow<T, S> {
-        VectorRow {values: self.values}
+        VectorRow {
+            values: self.values
+        }
     }
 }
 
@@ -107,18 +137,24 @@ where
     /// ```
     /// use num::Complex;
     /// 
-    /// let x = static_linear_algebra::VectorColumn::new(&[Complex::new(1, 0), Complex::new(0, 2)]);
+    /// let x = static_linear_algebra::VectorColumn::new([Complex::new(1, 0), Complex::new(0, 2)]);
     /// let y = x.hermitian_conjugate();
     /// 
     /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> VectorRow<Complex<T>, S> {
-        let values: [Complex<T>; S] = match (0..S).map(|i| self[i].conj()).collect::<Vec<Complex<T>>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
+        let values: [Complex<T>; S] = match self.values
+            .iter()
+            .map(|value| value.conj())
+            .collect::<Vec<Complex<T>>>()
+            .try_into() {
+                Ok(result) => result,
+                Err(_) => panic!("Should not happen"),
         };
 
-        VectorRow {values}
+        VectorRow {
+            values
+        }
     }
 }
 
@@ -153,7 +189,7 @@ where
     }
 
     fn is_zero(&self) -> bool {
-        (0..S).any(|i| self[i] != T::zero()) ^ true
+        (0..S).all(|i| self[i] == T::zero())
     }
 }
 
@@ -168,7 +204,7 @@ where
         let mut result: Self = VectorColumn::zero();
 
         for value in iter {
-            result = result + value;
+            result += value;
         }
 
         result
@@ -186,7 +222,7 @@ where
         let mut result: Self = VectorColumn::zero();
 
         for value in iter {
-            result = result + *value;
+            result += *value;
         }
 
         result
@@ -207,43 +243,44 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// let z = x + y;
     /// 
     /// assert_eq!(&[0, 11], z.get_values());
     /// ```
     fn add(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self[i] + rhs[i]).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S).map(|i| self.values[i] + rhs.values[i]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Self::Output {values}
+        Self::Output {
+            values
+        }
     }
 }
 
-impl<TL, TR, const S: usize> AddAssign<VectorColumn<TR, S>> for VectorColumn<TL, S>
+impl<T, const S: usize> AddAssign<VectorColumn<T, S>> for VectorColumn<T, S>
 where
-    TL: Copy,
-    TL: Add<TR, Output = TL>,
-    TR: Copy,
+    T: Copy,
+    T: Add<T, Output = T>,
 {
     /// Normal elementwise addition of two column vectors
     /// 
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// x += y;
     /// 
     /// assert_eq!(&[0, 11], x.get_values());
     /// ```
-    fn add_assign(&mut self, rhs: VectorColumn<TR, S>) {
-        let values: [TL; S] = match (0..S).map(|i| self[i] + rhs[i]).collect::<Vec<TL>>().try_into() {
+    fn add_assign(&mut self, rhs: VectorColumn<T, S>) {
+        let values: [T; S] = match (0..S).map(|i| self.values[i] + rhs.values[i]).collect::<Vec<T>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -266,15 +303,15 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// let z = x - y;
     /// 
     /// assert_eq!(&[0, -9], z.get_values());
     /// ```
     fn sub(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self[i] - rhs[i]).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S).map(|i| self.values[i] - rhs.values[i]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -283,26 +320,25 @@ where
     }
 }
 
-impl<TL, TR, const S: usize> SubAssign<VectorColumn<TR, S>> for VectorColumn<TL, S>
+impl<T, const S: usize> SubAssign<VectorColumn<T, S>> for VectorColumn<T, S>
 where
-    TL: Copy,
-    TL: Sub<TR, Output = TL>,
-    TR: Copy,
+    T: Copy,
+    T: Sub<T, Output = T>,
 {
     /// Normal elementwise subtraction of two column vectors
     /// 
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// x -= y;
     /// 
     /// assert_eq!(&[0, -9], x.get_values());
     /// ```
-    fn sub_assign(&mut self, rhs: VectorColumn<TR, S>) {
-        let values: [TL; S] = match (0..S).map(|i| self[i] - rhs[i]).collect::<Vec<TL>>().try_into() {
+    fn sub_assign(&mut self, rhs: VectorColumn<T, S>) {
+        let values: [T; S] = match (0..S).map(|i| self.values[i] - rhs.values[i]).collect::<Vec<T>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -326,15 +362,15 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// let z = x * y;
     /// 
     /// assert_eq!(10, z);
     /// ```
     fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        (0..S).map(|i| self[i] * rhs[i]).sum()
+        (0..S).map(|i| self.values[i] * rhs.values[i]).sum()
     }
 }
 
@@ -353,8 +389,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorRow::new(&[10, 20]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorRow::new([10, 20]);
     /// 
     /// let z = x * y;
     /// 
@@ -363,7 +399,7 @@ where
     fn mul(self, rhs: VectorRow<TR, C>) -> Self::Output {
         let values: [[TO; C]; R] = 
             match (0..R).map(|r| 
-            match (0..C).map(|c| self[r] * rhs[c]).collect::<Vec<TO>>().try_into() {
+            match (0..C).map(|c| self.values[r] * rhs.values[c]).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         }).collect::<Vec<[TO; C]>>().try_into() {
@@ -390,7 +426,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let y = 10;
     /// 
     /// let z = x * y;
@@ -398,7 +434,7 @@ where
     /// assert_eq!(&[0, 10], z.get_values());
     /// ```
     fn mul(self, rhs: TR) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S).map(|i| self.values[i] * rhs).collect::<Vec<TO>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -407,27 +443,26 @@ where
     }
 }
 
-impl<TL, TR, const S: usize> MulAssign<TR> for VectorColumn<TL, S>
+impl<T, const S: usize> MulAssign<T> for VectorColumn<T, S>
 where
-    TL: Copy,
-    TL: Mul<TR, Output = TL>,
-    TR: Copy,
-    TR: Num,
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Num,
 {
     /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
     /// 
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let y = 10;
     /// 
     /// x *= y;
     /// 
     /// assert_eq!(&[0, 10], x.get_values());
     /// ```
-    fn mul_assign(&mut self, rhs: TR) {
-        let values: [TL; S] = match (0..S).map(|i| self[i] * rhs).collect::<Vec<TL>>().try_into() {
+    fn mul_assign(&mut self, rhs: T) {
+        let values: [T; S] = match (0..S).map(|i| self.values[i] * rhs).collect::<Vec<T>>().try_into() {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -436,71 +471,13 @@ where
     }
 }
 
-macro_rules! dot_method {
-    ($TL:ty) => {
-        impl<TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for $TL
-        where
-            $TL: Mul<TR, Output = TO>,
-            TR: Copy,
-            TO: Copy,
-        {
-            type Output = VectorColumn<TO, S>;
-
-            /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
-            fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-                let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
-                    Ok(result) => result,
-                    Err(_) => panic!("Should not happen"),
-                };
-
-                Self::Output {values}
-            }
-        }
-    };
-}
-
-impl<T, TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for Complex<T>
-where
-    Complex<T>: Copy,
-    Complex<T>: Mul<TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
-{
-    type Output = VectorColumn<TO, S>;
-
-    /// Scalar multiplication from the left, this only works for specific types, for generic types use rhs multiplication
-    fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self * rhs[i]).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        Self::Output {values}
-    }
-}
-
-dot_method!(u8);
-dot_method!(u16);
-dot_method!(u32);
-dot_method!(u64);
-dot_method!(u128);
-dot_method!(usize);
-dot_method!(i8);
-dot_method!(i16);
-dot_method!(i32);
-dot_method!(i64);
-dot_method!(i128);
-dot_method!(isize);
-dot_method!(f32);
-dot_method!(f64);
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn new() {
-        let result = VectorColumn::new(&[0, 1, 2, 3]);
+        let result = VectorColumn::new([0, 1, 2, 3]);
         assert_eq!([0, 1, 2, 3], result.values);
     }
 
@@ -512,13 +489,13 @@ mod tests {
 
     #[test]
     fn get_values() {
-        let result = VectorColumn::new(&[0, 1, 2]);
+        let result = VectorColumn::new([0, 1, 2]);
         assert_eq!([0, 1, 2], *result.get_values());
     }
 
     #[test]
     fn get_values_mut() {
-        let mut result = VectorColumn::new(&[0, 1, 2]);
+        let mut result = VectorColumn::new([0, 1, 2]);
         let data = result.get_values_mut();
         data[1] = 5;
         assert_eq!([0, 5, 2], result.values);
@@ -526,13 +503,13 @@ mod tests {
 
     #[test]
     fn index() {
-        let result = VectorColumn::new(&[0, 1, 2]);
+        let result = VectorColumn::new([0, 1, 2]);
         assert_eq!(1, result[1]);
     }
 
     #[test]
     fn index_mut() {
-        let mut result = VectorColumn::new(&[0, 1, 2]);
+        let mut result = VectorColumn::new([0, 1, 2]);
         result[1] = 5;
         assert_eq!([0, 5, 2], result.values);
     }
@@ -545,131 +522,98 @@ mod tests {
 
     #[test]
     fn is_zero() {
-        let result1 = VectorColumn::new(&[0, 0, 0]);
-        let result2 = VectorColumn::new(&[0, 1, 0]);
+        let result1 = VectorColumn::new([0, 0, 0]);
+        let result2 = VectorColumn::new([0, 1, 0]);
         assert_eq!(true, result1.is_zero());
         assert_eq!(false, result2.is_zero());
     }
 
     #[test]
     fn sum() {
-        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new(&[0, 1, 2]), VectorColumn::new(&[0, 10, 20]), VectorColumn::new(&[0, 100, 200])];
+        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new([0, 1, 2]), VectorColumn::new([0, 10, 20]), VectorColumn::new([0, 100, 200])];
         let result: VectorColumn<i32, 3> = list.into_iter().sum();
         assert_eq!([0, 111, 222], result.values);
     }
 
     #[test]
     fn sum_ref() {
-        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new(&[0, 1, 2]), VectorColumn::new(&[0, 10, 20]), VectorColumn::new(&[0, 100, 200])];
+        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new([0, 1, 2]), VectorColumn::new([0, 10, 20]), VectorColumn::new([0, 100, 200])];
         let result: VectorColumn<i32, 3> = list.iter().sum();
         assert_eq!([0, 111, 222], result.values);
     }
 
     #[test]
     fn add() {
-        let vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         let result = vector1 + vector2;
         assert_eq!([0, 11, 22], result.values);
     }
 
     #[test]
     fn add_assign() {
-        let mut vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let mut vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         vector1 += vector2;
         assert_eq!([0, 11, 22], vector1.values);
     }
 
     #[test]
     fn sub() {
-        let vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         let result = vector1 - vector2;
         assert_eq!([0, -9, -18], result.values);
     }
 
     #[test]
     fn sub_assign() {
-        let mut vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let mut vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         vector1 -= vector2;
         assert_eq!([0, -9, -18], vector1.values);
     }
 
     #[test]
     fn dot_product() {
-        let vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[3, 4, 5]);
+        let vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([3, 4, 5]);
         let result = vector1 * vector2;
         assert_eq!(14, result);
     }
 
     #[test]
     fn out_product() {
-        let vector_row = VectorRow::new(&[0, 1]);
-        let vector_column = VectorColumn::new(&[2, 3, 4]);
+        let vector_row = VectorRow::new([0, 1]);
+        let vector_column = VectorColumn::new([2, 3, 4]);
         let result = vector_column * vector_row;
         assert_eq!([[0, 2], [0, 3], [0, 4]], result.values);
     }
 
     #[test]
-    fn scalar_mul_right() {
-        let vector = VectorColumn::new(&[0, 1, 2]);
+    fn scalar_mul() {
+        let vector = VectorColumn::new([0, 1, 2]);
         let result = vector * 5;
         assert_eq!([0, 5, 10], result.values);
     }
 
     #[test]
     fn scalar_mul_assign() {
-        let mut vector = VectorColumn::new(&[0, 1, 2]);
+        let mut vector = VectorColumn::new([0, 1, 2]);
         vector *= 5;
         assert_eq!([0, 5, 10], vector.values);
     }
 
-    macro_rules! dot_method_test {
-        ($T:ty, $name:ident) => {
-            #[test]
-            fn $name() {
-                let vector: VectorColumn<$T, 3> = VectorColumn::new(&[0 as $T, 1 as $T, 2 as $T]);
-                let result = (4 as $T) * vector;
-                assert_eq!([0 as $T, 4 as $T, 8 as $T], result.values);    
-            }
-        };
-    }
-
-    dot_method_test!(u8, scalar_mul_left_u8);
-    dot_method_test!(u16, scalar_mul_left_u16);
-    dot_method_test!(u32, scalar_mul_left_u32);
-    dot_method_test!(u64, scalar_mul_left_u64);
-    dot_method_test!(u128, scalar_mul_left_u128);
-    dot_method_test!(usize, scalar_mul_left_usize);
-    dot_method_test!(i8, scalar_mul_left_i8);
-    dot_method_test!(i16, scalar_mul_left_i16);
-    dot_method_test!(i32, scalar_mul_left_i32);
-    dot_method_test!(i64, scalar_mul_left_i64);
-    dot_method_test!(i128, scalar_mul_left_i128);
-    dot_method_test!(isize, scalar_mul_left_isize);
-    dot_method_test!(f32, scalar_mul_left_f32);
-    dot_method_test!(f64, scalar_mul_left_f64);
-
-    #[test]
-    fn scalar_mul_left_complex() {
-        let vector = VectorColumn::new(&[Complex::new(0., 0.), Complex::new(1., 0.), Complex::new(0., 1.)]);
-        let result = Complex::new(0., 4.) * vector;
-        assert_eq!([Complex::new(0., 0.), Complex::new(0., 4.), Complex::new(-4., 0.)], result.values);    
-    }
-
     #[test]
     fn transpose() {
-        let vector = VectorColumn::new(&[0, 1, 2]);
+        let vector = VectorColumn::new([0, 1, 2]);
         let result = vector.transpose();
         assert_eq!([0, 1, 2], result.values);
     }
 
     #[test]
     fn hermitian_conjugate() {
-        let vector = VectorColumn::new(&[Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
+        let vector = VectorColumn::new([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
         let result = vector.hermitian_conjugate();
         assert_eq!([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, -1)], result.values);
     }

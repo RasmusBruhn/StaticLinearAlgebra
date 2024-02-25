@@ -1,3 +1,6 @@
+//! This part of the library includes all definitions of matrices and vectors
+//! and all common operations of them
+
 mod matrix;
 mod vector_column;
 mod vector_row;
