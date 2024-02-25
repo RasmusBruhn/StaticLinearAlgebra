@@ -7,6 +7,7 @@ use std::{
         Add,
         Sub,
         Mul,
+        Div,
         AddAssign,
         SubAssign,
         MulAssign,
@@ -15,6 +16,7 @@ use std::{
         Sum,
         Product,
     },
+    array,
 };
 use num::{
     traits::{
@@ -313,8 +315,6 @@ where
     /// assert_eq!(x.determinant(), -2.0)
     /// ```
     pub fn determinant(&self) -> T {
-        assert_ne!(S, 0);
-
         match S {
             1 => {
                 self.values[0][0]
@@ -403,6 +403,113 @@ where
                 } else {
                     -value * sub_det_value
                 }
+            }
+        })
+        .sum::<T>()
+}
+
+impl<T, const S: usize> Matrix<T, S, S> 
+where
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Div<T, Output = T>,
+    T: Sum,
+    T: Add<Output = T>,
+    T: Sub<Output = T>,
+    T: Neg<Output = T>,
+    T: Zero,
+    T: One,
+{
+    /// Calculates the inverse for the matrix
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    /// let x = static_linear_algebra::Matrix::new([[1.0, 2.0], [3.0, 4.0]]);
+    /// 
+    /// assert_eq!(x.inverse().unwrap().get_values(), &[[-2.0, 1.0], [1.5, -0.5]])
+    /// ```
+    pub fn inverse(&self) -> Option<Self> {
+        // Get the determinant and make sure it is not zero
+        let det = self.determinant();
+        if det.is_zero() {
+            return None;
+        }
+
+        // Calculate the inverse
+        let values: [[T; S]; S] = array::from_fn(|row| {
+            let unused: [bool; S] = array::from_fn(|unused_column| unused_column != row);
+            array::from_fn(|column| {
+                let value = sub_determinant_step(&self.values, &unused, column) / det;
+                if (row + column) % 2 == 0 {
+                    value
+                } else {
+                    -value
+                }
+            })
+        });
+
+        Some(Self {
+            values
+        })
+    }
+}
+
+fn sub_determinant_step<T, const S: usize>(data: &[[T; S]], unused: &[bool; S], skip_line: usize) -> T
+where
+    T: Copy,
+    T: Mul<T, Output = T>,
+    T: Sum,
+    T: Neg<Output = T>,
+    T: One,
+{
+    // Stop if done
+    if data.is_empty() {
+        return T::one();
+    }
+
+    // Try to skip line
+    if skip_line == 0 {
+        return sub_determinant_step(&data[1..], unused, data.len());
+    }
+
+    // Run through the first row and multiply unused values by subdeterminants of the next rows
+    data[0]
+        .iter()
+        .enumerate()
+        .zip(unused.iter())
+        .filter_map(|(value, &keep)| {
+            if keep {
+                Some(value)
+            } else {
+                None
+            }
+        })
+        .enumerate()
+        .map(|(sign, (location, &value))| {
+            // Remove the current column from the unused columns list
+            let new_unused: [bool; S] = unused
+                .iter()
+                .enumerate()
+                .map(|(keep_location, &keep)| {
+                    if keep_location == location {
+                        false
+                    } else {
+                        keep
+                    }
+                })
+                .collect::<Vec<bool>>()
+                .try_into()
+                .unwrap();
+
+            // Calculate the sub determinant
+            let sub_det_value = sub_determinant_step(&data[1..], &new_unused, skip_line - 1);
+
+            // Make sure the sign alternates
+            if sign % 2 == 0 {
+                value * sub_det_value
+            } else {
+                -value * sub_det_value
             }
         })
         .sum::<T>()
@@ -847,6 +954,18 @@ where
 mod tests {
     use super::*;
 
+    fn check_close<const R: usize, const C: usize>(lhs: &[[f64; C]; R], rhs: &[[f64; C]; R], tolerance: f64) -> bool {
+        lhs.iter()
+            .zip(rhs.iter())
+            .all(|(lhs, rhs)| {
+                lhs.iter()
+                    .zip(rhs.iter())
+                    .all(|(&lhs, &rhs)| {
+                        (lhs - rhs).abs() < tolerance
+                    })
+            })
+    }
+
     #[test]
     fn new() {
         let result = Matrix::new([[0, 1], [2, 3], [4, 5]]);
@@ -1053,15 +1172,36 @@ mod tests {
 
     #[test]
     fn determinant() {
+        let matrix1 = Matrix::new([[5]]);
         let matrix2 = Matrix::new([[4, 5], [7, 4]]);
         let matrix3 = Matrix::new([[3, 9, 4], [6, 3, 6], [1, 6, 1]]);
         let matrix4 = Matrix::new([[3, 5, 8, 3], [8, 8, 4, 4], [9, 3, 1, 6], [7, 3, 8, 6]]);
         let matrix5 = Matrix::new([[9, 2, 7, 5, 6], [0, 0, 9, 3, 6], [0, 9, 8, 7, 8], [3, 9, 1, 5, 9], [1, 2, 2, 2, 7]]);
         let matrix6 = Matrix::new([[9, 0, 8, 0, 1, 0], [5, 2, 3, 1, 2, 3], [4, 1, 1, 1, 6, 3], [5, 2, 8, 8, 8, 2], [8, 8, 6, 8, 9, 6], [8, 3, 7, 2, 2, 5]]);
+        assert_eq!(5, matrix1.determinant());
         assert_eq!(-19, matrix2.determinant());
         assert_eq!(33, matrix3.determinant());
         assert_eq!(272, matrix4.determinant());
         assert_eq!(1569, matrix5.determinant());
         assert_eq!(-3458, matrix6.determinant());
+    }
+
+    #[test]
+    fn inverse() {
+        let matrix1 = Matrix::new([[5.0]]);
+        let matrix2 = Matrix::new([[4.0, 5.0], [7.0, 4.0]]);
+        let matrix3 = Matrix::new([[3.0, 9.0, 4.0], [6.0, 3.0, 6.0], [1.0, 6.0, 1.0]]);
+        let matrix4 = Matrix::new([[3.0, 5.0, 8.0, 3.0], [8.0, 8.0, 4.0, 4.0], [9.0, 3.0, 1.0, 6.0], [7.0, 3.0, 8.0, 6.0]]);
+        let matrix5 = Matrix::new([[9.0, 2.0, 7.0, 5.0, 6.0], [0.0, 0.0, 9.0, 3.0, 6.0], [0.0, 9.0, 8.0, 7.0, 8.0], [3.0, 9.0, 1.0, 5.0, 9.0], [1.0, 2.0, 2.0, 2.0, 7.0]]);
+        let matrix6 = Matrix::new([[9.0, 0.0, 8.0, 0.0, 1.0, 0.0], [5.0, 2.0, 3.0, 1.0, 2.0, 3.0], [4.0, 1.0, 1.0, 1.0, 6.0, 3.0], [5.0, 2.0, 8.0, 8.0, 8.0, 2.0], [8.0, 8.0, 6.0, 8.0, 9.0, 6.0], [8.0, 3.0, 7.0, 2.0, 2.0, 5.0]]);
+        assert!(check_close(matrix1.inverse().unwrap().get_values(), &[[0.2]], 1e-5));
+        assert!(check_close(matrix2.inverse().unwrap().get_values(), &[[-0.210526, 0.263158], [0.368421, -0.210526]], 1e-5));
+        assert!(check_close(matrix3.inverse().unwrap().get_values(), &[[-1.0, 0.454545, 1.27273], [0.0, -0.030303, 0.181818], [1.0, -0.272727, -1.36364]], 1e-5));
+        assert!(check_close(matrix4.inverse().unwrap().get_values(), &[[-0.926471, 0.540441, -0.632353, 0.735294], [0.455882, -0.0992647, 0.279412, -0.441176], [-0.264706, 0.154412, -0.323529, 0.352941], [1.20588, -0.786765, 1.02941, -0.941176]], 1e-5));
+        assert!(check_close(matrix5.inverse().unwrap().get_values(), &[[0.0210325, 0.335883, -0.328872, 0.432122, -0.48566], [-0.225621, 0.912046, -0.65392, 1.09178, -1.24474], [-0.137667, 0.771192, -0.483748, 0.717017, -0.912046], [0.493308, -2.15233, 1.6501, -2.31931, 2.51816], [-0.040153, 0.0860421, -0.0994264, 0.08413, 0.108987]], 1e-5));
+        assert!(check_close(matrix6.inverse().unwrap().get_values(), &[[-0.0237131, 1.81029, -0.32273, 0.175824, -0.172932, -0.75535], [0.187392, -1.50087, 0.1845, -0.340659, 0.390977, 0.456912], [0.137941, -1.89647, 0.316368, -0.181319, 0.176692, 0.80856], [-0.224407, 2.20474, -0.541932, 0.395604, -0.270677, -0.831116], [0.10989, -1.12088, 0.373626, -0.131868, 0.142857, 0.32967], [-0.221805, 0.225564, 0.0300752, 0.0714286, -0.154135, 0.203008]], 1e-5));
+
+        let matrix_singular = Matrix::new([[2.0, 3.0], [4.0, 6.0]]);
+        assert_eq!(matrix_singular.inverse(), None);
     }
 }
