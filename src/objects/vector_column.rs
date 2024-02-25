@@ -48,13 +48,15 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1, 2]);
     /// 
     /// assert_eq!(&[0, 1, 2], x.get_values());
     /// ```
-    pub fn new(values: &[T; S]) -> Self {
+    pub fn new(values: [T; S]) -> Self {
+        assert_ne!(S, 0);
+
         Self {
-            values: *values
+            values
         }
     }
 
@@ -68,6 +70,8 @@ where
     /// assert_eq!(&[1., 1.], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
+        assert_ne!(S, 0);
+
         Self {
             values: [value; S]
         }
@@ -78,7 +82,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let data = x.get_values();
     /// 
     /// assert_eq!(&[0, 1], data);
@@ -92,7 +96,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let data = x.get_values_mut();
     /// data[0] = 5;
     /// 
@@ -107,7 +111,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1, 2]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1, 2]);
     /// let y = x.transpose();
     /// 
     /// assert_eq!(&[0, 1, 2], y.get_values());
@@ -133,7 +137,7 @@ where
     /// ```
     /// use num::Complex;
     /// 
-    /// let x = static_linear_algebra::VectorColumn::new(&[Complex::new(1, 0), Complex::new(0, 2)]);
+    /// let x = static_linear_algebra::VectorColumn::new([Complex::new(1, 0), Complex::new(0, 2)]);
     /// let y = x.hermitian_conjugate();
     /// 
     /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
@@ -239,8 +243,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// let z = x + y;
     /// 
@@ -268,8 +272,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// x += y;
     /// 
@@ -299,8 +303,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// let z = x - y;
     /// 
@@ -326,8 +330,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// x -= y;
     /// 
@@ -358,8 +362,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new(&[0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     /// 
     /// let z = x * y;
     /// 
@@ -385,8 +389,8 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
-    /// let y = static_linear_algebra::VectorRow::new(&[10, 20]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let y = static_linear_algebra::VectorRow::new([10, 20]);
     /// 
     /// let z = x * y;
     /// 
@@ -422,7 +426,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let y = 10;
     /// 
     /// let z = x * y;
@@ -450,7 +454,7 @@ where
     /// # Examples
     /// 
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new(&[0, 1]);
+    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
     /// let y = 10;
     /// 
     /// x *= y;
@@ -473,7 +477,7 @@ mod tests {
 
     #[test]
     fn new() {
-        let result = VectorColumn::new(&[0, 1, 2, 3]);
+        let result = VectorColumn::new([0, 1, 2, 3]);
         assert_eq!([0, 1, 2, 3], result.values);
     }
 
@@ -485,13 +489,13 @@ mod tests {
 
     #[test]
     fn get_values() {
-        let result = VectorColumn::new(&[0, 1, 2]);
+        let result = VectorColumn::new([0, 1, 2]);
         assert_eq!([0, 1, 2], *result.get_values());
     }
 
     #[test]
     fn get_values_mut() {
-        let mut result = VectorColumn::new(&[0, 1, 2]);
+        let mut result = VectorColumn::new([0, 1, 2]);
         let data = result.get_values_mut();
         data[1] = 5;
         assert_eq!([0, 5, 2], result.values);
@@ -499,13 +503,13 @@ mod tests {
 
     #[test]
     fn index() {
-        let result = VectorColumn::new(&[0, 1, 2]);
+        let result = VectorColumn::new([0, 1, 2]);
         assert_eq!(1, result[1]);
     }
 
     #[test]
     fn index_mut() {
-        let mut result = VectorColumn::new(&[0, 1, 2]);
+        let mut result = VectorColumn::new([0, 1, 2]);
         result[1] = 5;
         assert_eq!([0, 5, 2], result.values);
     }
@@ -518,98 +522,98 @@ mod tests {
 
     #[test]
     fn is_zero() {
-        let result1 = VectorColumn::new(&[0, 0, 0]);
-        let result2 = VectorColumn::new(&[0, 1, 0]);
+        let result1 = VectorColumn::new([0, 0, 0]);
+        let result2 = VectorColumn::new([0, 1, 0]);
         assert_eq!(true, result1.is_zero());
         assert_eq!(false, result2.is_zero());
     }
 
     #[test]
     fn sum() {
-        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new(&[0, 1, 2]), VectorColumn::new(&[0, 10, 20]), VectorColumn::new(&[0, 100, 200])];
+        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new([0, 1, 2]), VectorColumn::new([0, 10, 20]), VectorColumn::new([0, 100, 200])];
         let result: VectorColumn<i32, 3> = list.into_iter().sum();
         assert_eq!([0, 111, 222], result.values);
     }
 
     #[test]
     fn sum_ref() {
-        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new(&[0, 1, 2]), VectorColumn::new(&[0, 10, 20]), VectorColumn::new(&[0, 100, 200])];
+        let list: [VectorColumn<i32, 3>; 3] = [VectorColumn::new([0, 1, 2]), VectorColumn::new([0, 10, 20]), VectorColumn::new([0, 100, 200])];
         let result: VectorColumn<i32, 3> = list.iter().sum();
         assert_eq!([0, 111, 222], result.values);
     }
 
     #[test]
     fn add() {
-        let vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         let result = vector1 + vector2;
         assert_eq!([0, 11, 22], result.values);
     }
 
     #[test]
     fn add_assign() {
-        let mut vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let mut vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         vector1 += vector2;
         assert_eq!([0, 11, 22], vector1.values);
     }
 
     #[test]
     fn sub() {
-        let vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         let result = vector1 - vector2;
         assert_eq!([0, -9, -18], result.values);
     }
 
     #[test]
     fn sub_assign() {
-        let mut vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[0, 10, 20]);
+        let mut vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([0, 10, 20]);
         vector1 -= vector2;
         assert_eq!([0, -9, -18], vector1.values);
     }
 
     #[test]
     fn dot_product() {
-        let vector1 = VectorColumn::new(&[0, 1, 2]);
-        let vector2 = VectorColumn::new(&[3, 4, 5]);
+        let vector1 = VectorColumn::new([0, 1, 2]);
+        let vector2 = VectorColumn::new([3, 4, 5]);
         let result = vector1 * vector2;
         assert_eq!(14, result);
     }
 
     #[test]
     fn out_product() {
-        let vector_row = VectorRow::new(&[0, 1]);
-        let vector_column = VectorColumn::new(&[2, 3, 4]);
+        let vector_row = VectorRow::new([0, 1]);
+        let vector_column = VectorColumn::new([2, 3, 4]);
         let result = vector_column * vector_row;
         assert_eq!([[0, 2], [0, 3], [0, 4]], result.values);
     }
 
     #[test]
     fn scalar_mul() {
-        let vector = VectorColumn::new(&[0, 1, 2]);
+        let vector = VectorColumn::new([0, 1, 2]);
         let result = vector * 5;
         assert_eq!([0, 5, 10], result.values);
     }
 
     #[test]
     fn scalar_mul_assign() {
-        let mut vector = VectorColumn::new(&[0, 1, 2]);
+        let mut vector = VectorColumn::new([0, 1, 2]);
         vector *= 5;
         assert_eq!([0, 5, 10], vector.values);
     }
 
     #[test]
     fn transpose() {
-        let vector = VectorColumn::new(&[0, 1, 2]);
+        let vector = VectorColumn::new([0, 1, 2]);
         let result = vector.transpose();
         assert_eq!([0, 1, 2], result.values);
     }
 
     #[test]
     fn hermitian_conjugate() {
-        let vector = VectorColumn::new(&[Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
+        let vector = VectorColumn::new([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
         let result = vector.hermitian_conjugate();
         assert_eq!([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, -1)], result.values);
     }
