@@ -1053,6 +1053,15 @@ mod tests {
 
     #[test]
     fn determinant() {
-        let matrix1 = Matrix::new(&[[]])
+        let matrix2 = Matrix::new(&[[4, 5], [7, 4]]);
+        let matrix3 = Matrix::new(&[[3, 9, 4], [6, 3, 6], [1, 6, 1]]);
+        let matrix4 = Matrix::new(&[[3, 5, 8, 3], [8, 8, 4, 4], [9, 3, 1, 6], [7, 3, 8, 6]]);
+        let matrix5 = Matrix::new(&[[9, 2, 7, 5, 6], [0, 0, 9, 3, 6], [0, 9, 8, 7, 8], [3, 9, 1, 5, 9], [1, 2, 2, 2, 7]]);
+        let matrix6 = Matrix::new(&[[9, 0, 8, 0, 1, 0], [5, 2, 3, 1, 2, 3], [4, 1, 1, 1, 6, 3], [5, 2, 8, 8, 8, 2], [8, 8, 6, 8, 9, 6], [8, 3, 7, 2, 2, 5]]);
+        assert_eq!(-19, matrix2.determinant());
+        assert_eq!(33, matrix3.determinant());
+        assert_eq!(272, matrix4.determinant());
+        assert_eq!(1569, matrix5.determinant());
+        assert_eq!(-3458, matrix6.determinant());
     }
 }
