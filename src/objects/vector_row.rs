@@ -1,35 +1,20 @@
 //! Implementation and all methods on row vectors
 
-use std::{
-    ops::{
-        Index,
-        IndexMut,
-        Add,
-        Sub,
-        AddAssign,
-        SubAssign,
-        Mul,
-        MulAssign,
-    },
-    iter::Sum,
-};
+use super::{Matrix, VectorColumn};
+use core::ops::Neg;
 use num::{
-    traits::{
-        Zero,
-        Num,
-    },
+    traits::{Num, Zero},
     Complex,
 };
-use core::ops::Neg;
-use super::{
-    Matrix,
-    VectorColumn,
+use std::{
+    iter::Sum,
+    ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign},
 };
 
 /// A static row vector type
-/// 
+///
 /// Size must be known at compile time but operations are checked for size compatibility at compile time too
-/// 
+///
 /// S: The length of the vector
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VectorRow<T, const S: usize>
@@ -44,47 +29,43 @@ where
     T: Copy,
 {
     /// Initializes a new row vector with the given values
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1, 2]);
-    /// 
+    ///
     /// assert_eq!(&[0, 1, 2], x.get_values());
     /// ```
     pub fn new(values: [T; S]) -> Self {
         assert_ne!(S, 0);
-        
-        Self {
-            values
-        }
+
+        Self { values }
     }
 
     /// Initializes a new row vector filled with a single value
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::<f32, 2>::from_value(1.);
-    /// 
+    ///
     /// assert_eq!(&[1., 1.], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
         assert_ne!(S, 0);
 
-        Self {
-            values: [value; S]
-        }
+        Self { values: [value; S] }
     }
 
     /// Retrieves a reference to the data of the row vector
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let data = x.get_values();
-    /// 
+    ///
     /// assert_eq!(&[0, 1], data);
     /// ```
     pub fn get_values(&self) -> &[T; S] {
@@ -92,14 +73,14 @@ where
     }
 
     /// Retrieves a mutable reference to the data of the row vector
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let data = x.get_values_mut();
     /// data[0] = 5;
-    /// 
+    ///
     /// assert_eq!(&[5, 1], x.get_values());
     /// ```
     pub fn get_values_mut(&mut self) -> &mut [T; S] {
@@ -107,50 +88,56 @@ where
     }
 
     /// Transposes the row vector into a column vector
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1, 2]);
     /// let y = x.transpose();
-    /// 
+    ///
     /// assert_eq!(&[0, 1, 2], y.get_values());
     /// ```
     pub fn transpose(&self) -> VectorColumn<T, S> {
-        VectorColumn {values: self.values}
+        VectorColumn {
+            values: self.values,
+        }
     }
 }
 
-impl<T, const S: usize> VectorRow<Complex<T>, S> 
+impl<T, const S: usize> VectorRow<Complex<T>, S>
 where
     T: Copy,
     T: Num,
     T: Neg<Output = T>,
 {
-    /// Takes the hermitian conjugate of the row vector (transpose the vector 
+    /// Takes the hermitian conjugate of the row vector (transpose the vector
     /// and complex conjugate each element (change the sign of the imaginary part))
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use num::Complex;
-    /// 
+    ///
     /// let x = static_linear_algebra::VectorRow::new([Complex::new(1, 0), Complex::new(0, 2)]);
     /// let y = x.hermitian_conjugate();
-    /// 
+    ///
     /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> VectorColumn<Complex<T>, S> {
-        let values: [Complex<T>; S] = match (0..S).map(|i| self.values[i].conj()).collect::<Vec<Complex<T>>>().try_into() {
+        let values: [Complex<T>; S] = match (0..S)
+            .map(|i| self.values[i].conj())
+            .collect::<Vec<Complex<T>>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        VectorColumn {values}
+        VectorColumn { values }
     }
 }
 
-impl<T, const S: usize> Index<usize> for VectorRow<T, S> 
+impl<T, const S: usize> Index<usize> for VectorRow<T, S>
 where
     T: Copy,
 {
@@ -161,7 +148,7 @@ where
     }
 }
 
-impl<T, const S: usize> IndexMut<usize> for VectorRow<T, S> 
+impl<T, const S: usize> IndexMut<usize> for VectorRow<T, S>
 where
     T: Copy,
 {
@@ -231,24 +218,28 @@ where
     type Output = VectorRow<TO, S>;
 
     /// Normal elementwise addition of two row vectors
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = static_linear_algebra::VectorRow::new([0, 10]);
-    /// 
+    ///
     /// let z = x + y;
-    /// 
+    ///
     /// assert_eq!(&[0, 11], z.get_values());
     /// ```
     fn add(self, rhs: VectorRow<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self.values[i] + rhs.values[i]).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S)
+            .map(|i| self.values[i] + rhs.values[i])
+            .collect::<Vec<TO>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Self::Output {values}
+        Self::Output { values }
     }
 }
 
@@ -258,19 +249,23 @@ where
     T: Add<T, Output = T>,
 {
     /// Normal elementwise addition of two row vectors
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = static_linear_algebra::VectorRow::new([0, 10]);
-    /// 
+    ///
     /// x += y;
-    /// 
+    ///
     /// assert_eq!(&[0, 11], x.get_values());
     /// ```
     fn add_assign(&mut self, rhs: VectorRow<T, S>) {
-        let values: [T; S] = match (0..S).map(|i| self.values[i] + rhs.values[i]).collect::<Vec<T>>().try_into() {
+        let values: [T; S] = match (0..S)
+            .map(|i| self.values[i] + rhs.values[i])
+            .collect::<Vec<T>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -289,24 +284,28 @@ where
     type Output = VectorRow<TO, S>;
 
     /// Normal elementwise subtraction of two row vectors
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = static_linear_algebra::VectorRow::new([0, 10]);
-    /// 
+    ///
     /// let z = x - y;
-    /// 
+    ///
     /// assert_eq!(&[0, -9], z.get_values());
     /// ```
     fn sub(self, rhs: VectorRow<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self.values[i] - rhs.values[i]).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S)
+            .map(|i| self.values[i] - rhs.values[i])
+            .collect::<Vec<TO>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Self::Output {values}
+        Self::Output { values }
     }
 }
 
@@ -316,19 +315,23 @@ where
     T: Sub<T, Output = T>,
 {
     /// Normal elementwise subtraction of two row vectors
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = static_linear_algebra::VectorRow::new([0, 10]);
-    /// 
+    ///
     /// x -= y;
-    /// 
+    ///
     /// assert_eq!(&[0, -9], x.get_values());
     /// ```
     fn sub_assign(&mut self, rhs: VectorRow<T, S>) {
-        let values: [T; S] = match (0..S).map(|i| self.values[i] - rhs.values[i]).collect::<Vec<T>>().try_into() {
+        let values: [T; S] = match (0..S)
+            .map(|i| self.values[i] - rhs.values[i])
+            .collect::<Vec<T>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -348,15 +351,15 @@ where
     type Output = TO;
 
     /// Inner product (dot product) between two row vectors
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = static_linear_algebra::VectorRow::new([0, 10]);
-    /// 
+    ///
     /// let z = x * y;
-    /// 
+    ///
     /// assert_eq!(10, z);
     /// ```
     fn mul(self, rhs: VectorRow<TR, S>) -> Self::Output {
@@ -375,15 +378,15 @@ where
     type Output = TO;
 
     /// Inner product between a row vector and a column vector
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = static_linear_algebra::VectorColumn::new([10, 20]);
-    /// 
+    ///
     /// let z = x * y;
-    /// 
+    ///
     /// assert_eq!(20, z);
     /// ```
     fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
@@ -402,24 +405,28 @@ where
     type Output = VectorRow<TO, C>;
 
     /// Multiplication between a row vector and a matrix
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = static_linear_algebra::Matrix::new([[0, 10, 20], [30, 40, 50]]);
-    /// 
+    ///
     /// let z = x * y;
-    /// 
+    ///
     /// assert_eq!(&[30, 40, 50], z.get_values());
     /// ```
     fn mul(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [TO; C] = match (0..C).map(|c| (0..R).map(|r| self.values[r] * rhs.values[r][c]).sum()).collect::<Vec<TO>>().try_into() {
+        let values: [TO; C] = match (0..C)
+            .map(|c| (0..R).map(|r| self.values[r] * rhs.values[r][c]).sum())
+            .collect::<Vec<TO>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Self::Output {values}
+        Self::Output { values }
     }
 }
 
@@ -434,24 +441,28 @@ where
     type Output = VectorRow<TO, S>;
 
     /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = 10;
-    /// 
+    ///
     /// let z = x * y;
-    /// 
+    ///
     /// assert_eq!(&[0, 10], z.get_values());
     /// ```
     fn mul(self, rhs: TR) -> Self::Output {
-        let values: [TO; S] = match (0..S).map(|i| self.values[i] * rhs).collect::<Vec<TO>>().try_into() {
+        let values: [TO; S] = match (0..S)
+            .map(|i| self.values[i] * rhs)
+            .collect::<Vec<TO>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Self::Output {values}
+        Self::Output { values }
     }
 }
 
@@ -462,19 +473,23 @@ where
     T: Num,
 {
     /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::VectorRow::new([0, 1]);
     /// let y = 10;
-    /// 
+    ///
     /// x *= y;
-    /// 
+    ///
     /// assert_eq!(&[0, 10], x.get_values());
     /// ```
     fn mul_assign(&mut self, rhs: T) {
-        let values: [T; S] = match (0..S).map(|i| self.values[i] * rhs).collect::<Vec<T>>().try_into() {
+        let values: [T; S] = match (0..S)
+            .map(|i| self.values[i] * rhs)
+            .collect::<Vec<T>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
@@ -542,14 +557,22 @@ mod tests {
 
     #[test]
     fn sum() {
-        let list: [VectorRow<i32, 3>; 3] = [VectorRow::new([0, 1, 2]), VectorRow::new([0, 10, 20]), VectorRow::new([0, 100, 200])];
+        let list: [VectorRow<i32, 3>; 3] = [
+            VectorRow::new([0, 1, 2]),
+            VectorRow::new([0, 10, 20]),
+            VectorRow::new([0, 100, 200]),
+        ];
         let result: VectorRow<i32, 3> = list.into_iter().sum();
         assert_eq!([0, 111, 222], result.values);
     }
 
     #[test]
     fn sum_ref() {
-        let list: [VectorRow<i32, 3>; 3] = [VectorRow::new([0, 1, 2]), VectorRow::new([0, 10, 20]), VectorRow::new([0, 100, 200])];
+        let list: [VectorRow<i32, 3>; 3] = [
+            VectorRow::new([0, 1, 2]),
+            VectorRow::new([0, 10, 20]),
+            VectorRow::new([0, 100, 200]),
+        ];
         let result: VectorRow<i32, 3> = list.iter().sum();
         assert_eq!([0, 111, 222], result.values);
     }
@@ -635,6 +658,9 @@ mod tests {
     fn hermitian_conjugate() {
         let vector = VectorRow::new([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
         let result = vector.hermitian_conjugate();
-        assert_eq!([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, -1)], result.values);
+        assert_eq!(
+            [Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, -1)],
+            result.values
+        );
     }
 }
