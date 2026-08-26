@@ -10,8 +10,8 @@ Matrices:
 - Fixed trait "SubAssign" such that it cannot change the type of the original value
 - Fixed trait "MulAssign" such that it cannot change the type of the original value
 - Removed left side multiplication
-- TODO: Add determinant
-- TODO: Add inverse
+- Added determinant calculations for matrices
+- Added inverse matrix method
 
 Column vectors:
 - Fixed trait "AddAssign" such that it cannot change the type of the original value

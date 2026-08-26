@@ -1,40 +1,23 @@
 //! Implementation of and all methods on matrices
 
-use std::{
-    ops::{
-        Index,
-        IndexMut,
-        Add,
-        Sub,
-        Mul,
-        Div,
-        AddAssign,
-        SubAssign,
-        MulAssign,
-    },
-    iter::{
-        Sum,
-        Product,
-    },
-    array,
-};
+use super::vector_column::VectorColumn;
+use core::ops::Neg;
 use num::{
-    traits::{
-        Zero,
-        One,
-        Num,
-    },
+    traits::{Num, One, Zero},
     Complex,
 };
-use core::ops::Neg;
-use super::vector_column::VectorColumn;
+use std::{
+    array,
+    iter::{Product, Sum},
+    ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign, Sub, SubAssign},
+};
 
 /// A static matrix type
-/// 
+///
 /// Size must be known at compile time but operations are checked for size compatibility at compile time too
-/// 
+///
 /// R: The number of rows
-/// 
+///
 /// C: The number of columns
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Matrix<T, const R: usize, const C: usize>
@@ -49,30 +32,28 @@ where
     T: Copy,
 {
     /// Initializes a new matrix with the given values
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1, 2], [3, 4, 5]]);
-    /// 
+    ///
     /// assert_eq!(&[[0, 1, 2], [3, 4, 5]], x.get_values());
     /// ```
     pub fn new(values: [[T; C]; R]) -> Self {
         assert_ne!(C, 0);
         assert_ne!(R, 0);
 
-        Self {
-            values
-        }
+        Self { values }
     }
 
     /// Initializes a new matrix filled with a single value
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::<f32, 2, 2>::from_value(1.);
-    /// 
+    ///
     /// assert_eq!(&[[1., 1.], [1., 1.]], x.get_values());
     /// ```
     pub fn from_value(value: T) -> Self {
@@ -80,18 +61,18 @@ where
         assert_ne!(R, 0);
 
         Self {
-            values: [[value; C]; R]
+            values: [[value; C]; R],
         }
     }
 
     /// Retrieves a reference to the data of the matrix
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let data = x.get_values();
-    /// 
+    ///
     /// assert_eq!(&[[0, 1], [2, 3]], data);
     /// ```
     pub fn get_values(&self) -> &[[T; C]; R] {
@@ -99,14 +80,14 @@ where
     }
 
     /// Retrieves a mutable reference to the data of the matrix
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let data = x.get_values_mut();
     /// data[0][1] = 5;
-    /// 
+    ///
     /// assert_eq!(&[[0, 5], [2, 3]], x.get_values());
     /// ```
     pub fn get_values_mut(&mut self) -> &mut [[T; C]; R] {
@@ -114,29 +95,35 @@ where
     }
 
     /// Transposes the matrix, switching row and columns
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1, 2], [3, 4, 5]]);
     /// let y = x.transpose();
-    /// 
+    ///
     /// assert_eq!(&[[0, 3], [1, 4], [2, 5]], y.get_values());
     /// ```
     pub fn transpose(&self) -> Matrix<T, C, R> {
-        let values: [[T; R]; C] = 
-            match (0..C).map(|r| 
-            match (0..R).map(|c| self.values[c][r]).collect::<Vec<T>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[T; R]>>().try_into() {
+        let values: [[T; R]; C] = match (0..C)
+            .map(|r| {
+                match (0..R)
+                    .map(|c| self.values[c][r])
+                    .collect::<Vec<T>>()
+                    .try_into()
+                {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                }
+            })
+            .collect::<Vec<[T; R]>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Matrix {
-            values
-        }
+        Matrix { values }
     }
 }
 
@@ -147,26 +134,24 @@ where
 {
     /// Initializes a diagonal matrix where the diagonal contains the values given
     /// and everything else is 0
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::from_diag(&[2, 3]);
-    /// 
+    ///
     /// assert_eq!(&[[2, 0], [0, 3]], x.get_values());
     /// ```
     pub fn from_diag(values: &[T; S]) -> Self {
         assert_ne!(S, 0);
 
-        let mut use_values= [[T::zero(); S]; S];
-        
+        let mut use_values = [[T::zero(); S]; S];
+
         for (n, value) in values.iter().enumerate() {
             use_values[n][n] = *value;
         }
 
-        Self {
-            values: use_values
-        }
+        Self { values: use_values }
     }
 }
 
@@ -177,126 +162,125 @@ where
     T: One,
 {
     /// Initializes a diagonal matrix where the diagonal contains ones
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::<i32, 3, 3>::identity();
-    /// 
+    ///
     /// assert_eq!(&[[1, 0, 0], [0, 1, 0], [0, 0, 1]], x.get_values());
     /// ```
     pub fn identity() -> Self {
         assert_ne!(S, 0);
 
-        let mut use_values= [[T::zero(); S]; S];
-        
+        let mut use_values = [[T::zero(); S]; S];
+
         for n in 0..S {
             use_values[n][n] = T::one();
         }
 
-        Self {
-            values: use_values
-        }
+        Self { values: use_values }
     }
 }
 
-impl<T, const R: usize, const C: usize> Matrix<Complex<T>, R, C> 
+impl<T, const R: usize, const C: usize> Matrix<Complex<T>, R, C>
 where
     T: Copy,
     T: Num,
     T: Neg<Output = T>,
 {
-    /// Takes the hermitian conjugate of the matrix (transpose the matrix 
+    /// Takes the hermitian conjugate of the matrix (transpose the matrix
     /// and complex conjugate each element (change the sign of the imaginary part))
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use num::Complex;
-    /// 
+    ///
     /// let x = static_linear_algebra::Matrix::new([[Complex::new(1, 0), Complex::new(0, 2)], [Complex::new(0, 3), Complex::new(0, 4)]]);
     /// let y = x.hermitian_conjugate();
-    /// 
+    ///
     /// assert_eq!(&[[Complex::new(1, 0), Complex::new(0, -3)], [Complex::new(0, -2), Complex::new(0, -4)]], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> Matrix<Complex<T>, C, R> {
-        let values: [[Complex<T>; R]; C] = 
-            match (0..C).map(|r| 
-            match (0..R).map(|c| self.values[c][r].conj()).collect::<Vec<Complex<T>>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[Complex<T>; R]>>().try_into() {
+        let values: [[Complex<T>; R]; C] = match (0..C)
+            .map(|r| {
+                match (0..R)
+                    .map(|c| self.values[c][r].conj())
+                    .collect::<Vec<Complex<T>>>()
+                    .try_into()
+                {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                }
+            })
+            .collect::<Vec<[Complex<T>; R]>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Matrix {values}
+        Matrix { values }
     }
 }
 
-impl<T, const S: usize> Matrix<T, S, S> 
+impl<T, const S: usize> Matrix<T, S, S>
 where
     T: Copy,
     T: PartialEq,
 {
     /// Checks if the matrix is symmetric (the matrix is equal to its own transpose)
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [1, 2]]);
-    /// 
+    ///
     /// assert_eq!(true, x.is_symmetric());
     /// ```
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 1]]);
-    /// 
+    ///
     /// assert_eq!(false, x.is_symmetric());
     /// ```
     pub fn is_symmetric(&self) -> bool {
-        (0..S)
-            .all(|r| {
-                (0..r + 1)
-                    .all(|c| self.values[r][c] == self.values[c][r])
-            })
+        (0..S).all(|r| (0..r + 1).all(|c| self.values[r][c] == self.values[c][r]))
     }
 }
 
-impl<T, const S: usize> Matrix<Complex<T>, S, S> 
+impl<T, const S: usize> Matrix<Complex<T>, S, S>
 where
     T: Copy,
     T: Num,
     T: Neg<Output = T>,
 {
     /// Checks if the matrix is hearmitian (the matrix is equal to its own hearmitian conjugate)
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// use num::Complex;
-    /// 
+    ///
     /// let x = static_linear_algebra::Matrix::new([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
-    /// 
+    ///
     /// assert_eq!(true, x.is_hermitian());
     /// ```
-    /// 
+    ///
     /// ```
     /// use num::Complex;
-    /// 
+    ///
     /// let x = static_linear_algebra::Matrix::new([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
-    /// 
+    ///
     /// assert_eq!(false, x.is_hermitian());
     /// ```
     pub fn is_hermitian(&self) -> bool {
-        (0..S)
-            .all(|r| {
-                (0..r + 1).all(|c| self.values[r][c] == self.values[c][r].conj())
-            })
+        (0..S).all(|r| (0..r + 1).all(|c| self.values[r][c] == self.values[c][r].conj()))
     }
 }
 
-impl<T, const S: usize> Matrix<T, S, S> 
+impl<T, const S: usize> Matrix<T, S, S>
 where
     T: Copy,
     T: Mul<T, Output = T>,
@@ -306,48 +290,70 @@ where
     T: Neg<Output = T>,
 {
     /// Calculates the determinant for the matrix
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[1.0, 2.0], [3.0, 4.0]]);
-    /// 
+    ///
     /// assert_eq!(x.determinant(), -2.0)
     /// ```
     pub fn determinant(&self) -> T {
         match S {
-            1 => {
-                self.values[0][0]
-            }
-            2 => {
-                self.values[0][0] * self.values[1][1] - self.values[0][1] * self.values[1][0]
-            }
+            1 => self.values[0][0],
+            2 => self.values[0][0] * self.values[1][1] - self.values[0][1] * self.values[1][0],
             3 => {
-                self.values[0][0] * (self.values[1][1] * self.values[2][2] - self.values[1][2] * self.values[2][1]) -
-                self.values[0][1] * (self.values[1][0] * self.values[2][2] - self.values[1][2] * self.values[2][0]) +
-                self.values[0][2] * (self.values[1][0] * self.values[2][1] - self.values[1][1] * self.values[2][0])
+                self.values[0][0]
+                    * (self.values[1][1] * self.values[2][2]
+                        - self.values[1][2] * self.values[2][1])
+                    - self.values[0][1]
+                        * (self.values[1][0] * self.values[2][2]
+                            - self.values[1][2] * self.values[2][0])
+                    + self.values[0][2]
+                        * (self.values[1][0] * self.values[2][1]
+                            - self.values[1][1] * self.values[2][0])
             }
             4 => {
-                self.values[0][0] * (
-                    self.values[1][1] * (self.values[2][2] * self.values[3][3] - self.values[2][3] * self.values[3][2]) -
-                    self.values[1][2] * (self.values[2][1] * self.values[3][3] - self.values[2][3] * self.values[3][1]) +
-                    self.values[1][3] * (self.values[2][1] * self.values[3][2] - self.values[2][2] * self.values[3][1])
-                ) -
-                self.values[0][1] * (
-                    self.values[1][0] * (self.values[2][2] * self.values[3][3] - self.values[2][3] * self.values[3][2]) -
-                    self.values[1][2] * (self.values[2][0] * self.values[3][3] - self.values[2][3] * self.values[3][0]) +
-                    self.values[1][3] * (self.values[2][0] * self.values[3][2] - self.values[2][2] * self.values[3][0])
-                ) +
-                self.values[0][2] * (
-                    self.values[1][0] * (self.values[2][1] * self.values[3][3] - self.values[2][3] * self.values[3][1]) -
-                    self.values[1][1] * (self.values[2][0] * self.values[3][3] - self.values[2][3] * self.values[3][0]) +
-                    self.values[1][3] * (self.values[2][0] * self.values[3][1] - self.values[2][1] * self.values[3][0])
-                ) -
-                self.values[0][3] * (
-                    self.values[1][0] * (self.values[2][1] * self.values[3][2] - self.values[2][2] * self.values[3][1]) -
-                    self.values[1][1] * (self.values[2][0] * self.values[3][2] - self.values[2][2] * self.values[3][0]) +
-                    self.values[1][2] * (self.values[2][0] * self.values[3][1] - self.values[2][1] * self.values[3][0])
-                )
+                self.values[0][0]
+                    * (self.values[1][1]
+                        * (self.values[2][2] * self.values[3][3]
+                            - self.values[2][3] * self.values[3][2])
+                        - self.values[1][2]
+                            * (self.values[2][1] * self.values[3][3]
+                                - self.values[2][3] * self.values[3][1])
+                        + self.values[1][3]
+                            * (self.values[2][1] * self.values[3][2]
+                                - self.values[2][2] * self.values[3][1]))
+                    - self.values[0][1]
+                        * (self.values[1][0]
+                            * (self.values[2][2] * self.values[3][3]
+                                - self.values[2][3] * self.values[3][2])
+                            - self.values[1][2]
+                                * (self.values[2][0] * self.values[3][3]
+                                    - self.values[2][3] * self.values[3][0])
+                            + self.values[1][3]
+                                * (self.values[2][0] * self.values[3][2]
+                                    - self.values[2][2] * self.values[3][0]))
+                    + self.values[0][2]
+                        * (self.values[1][0]
+                            * (self.values[2][1] * self.values[3][3]
+                                - self.values[2][3] * self.values[3][1])
+                            - self.values[1][1]
+                                * (self.values[2][0] * self.values[3][3]
+                                    - self.values[2][3] * self.values[3][0])
+                            + self.values[1][3]
+                                * (self.values[2][0] * self.values[3][1]
+                                    - self.values[2][1] * self.values[3][0]))
+                    - self.values[0][3]
+                        * (self.values[1][0]
+                            * (self.values[2][1] * self.values[3][2]
+                                - self.values[2][2] * self.values[3][1])
+                            - self.values[1][1]
+                                * (self.values[2][0] * self.values[3][2]
+                                    - self.values[2][2] * self.values[3][0])
+                            + self.values[1][2]
+                                * (self.values[2][0] * self.values[3][1]
+                                    - self.values[2][1] * self.values[3][0]))
             }
             _ => determinant_step(&self.values, &[true; S]),
         }
@@ -366,13 +372,7 @@ where
         .iter()
         .enumerate()
         .zip(unused.iter())
-        .filter_map(|(value, &keep)| {
-            if keep {
-                Some(value)
-            } else {
-                None
-            }
-        })
+        .filter_map(|(value, &keep)| if keep { Some(value) } else { None })
         .enumerate()
         .map(|(sign, (location, &value))| {
             if data.len() <= 1 {
@@ -408,7 +408,7 @@ where
         .sum::<T>()
 }
 
-impl<T, const S: usize> Matrix<T, S, S> 
+impl<T, const S: usize> Matrix<T, S, S>
 where
     T: Copy,
     T: Mul<T, Output = T>,
@@ -421,12 +421,12 @@ where
     T: One,
 {
     /// Calculates the inverse for the matrix
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[1.0, 2.0], [3.0, 4.0]]);
-    /// 
+    ///
     /// assert_eq!(x.inverse().unwrap().get_values(), &[[-2.0, 1.0], [1.5, -0.5]])
     /// ```
     pub fn inverse(&self) -> Option<Self> {
@@ -449,13 +449,15 @@ where
             })
         });
 
-        Some(Self {
-            values
-        })
+        Some(Self { values })
     }
 }
 
-fn sub_determinant_step<T, const S: usize>(data: &[[T; S]], unused: &[bool; S], skip_line: usize) -> T
+fn sub_determinant_step<T, const S: usize>(
+    data: &[[T; S]],
+    unused: &[bool; S],
+    skip_line: usize,
+) -> T
 where
     T: Copy,
     T: Mul<T, Output = T>,
@@ -478,13 +480,7 @@ where
         .iter()
         .enumerate()
         .zip(unused.iter())
-        .filter_map(|(value, &keep)| {
-            if keep {
-                Some(value)
-            } else {
-                None
-            }
-        })
+        .filter_map(|(value, &keep)| if keep { Some(value) } else { None })
         .enumerate()
         .map(|(sign, (location, &value))| {
             // Remove the current column from the unused columns list
@@ -515,7 +511,7 @@ where
         .sum::<T>()
 }
 
-impl<T, const R: usize, const C: usize> Index<usize> for Matrix<T, R, C> 
+impl<T, const R: usize, const C: usize> Index<usize> for Matrix<T, R, C>
 where
     T: Copy,
 {
@@ -526,7 +522,7 @@ where
     }
 }
 
-impl<T, const R: usize, const C: usize> IndexMut<usize> for Matrix<T, R, C> 
+impl<T, const R: usize, const C: usize> IndexMut<usize> for Matrix<T, R, C>
 where
     T: Copy,
 {
@@ -548,11 +544,7 @@ where
     fn is_zero(&self) -> bool {
         self.values
             .iter()
-            .all(|column| {
-                column
-                    .iter()
-                    .all(|value| *value == T::zero())
-            })
+            .all(|column| column.iter().all(|value| *value == T::zero()))
     }
 }
 
@@ -653,19 +645,20 @@ where
     type Output = Matrix<TO, R, C>;
 
     /// Normal elementwise addition of two matrices
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
-    /// 
+    ///
     /// let z = x + y;
-    /// 
+    ///
     /// assert_eq!(&[[0, 11], [22, 33]], z.get_values());
     /// ```
     fn add(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[TO; C]; R] = match self.values
+        let values: [[TO; C]; R] = match self
+            .values
             .iter()
             .zip(rhs.values.iter())
             .map(|(c_lhs, c_rhs)| {
@@ -674,20 +667,20 @@ where
                     .zip(c_rhs.iter())
                     .map(|(lhs, rhs)| *lhs + *rhs)
                     .collect::<Vec<TO>>()
-                    .try_into() {
-                        Ok(result) => result,
-                        Err(_) => panic!("Should not happen"),
-                    }
+                    .try_into()
+                {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                }
             })
             .collect::<Vec<[TO; C]>>()
-            .try_into() {
-                Ok(result) => result,
-                Err(_) => panic!("Should not happen"),
-            };
+            .try_into()
+        {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
 
-        Self::Output {
-            values
-        }
+        Self::Output { values }
     }
 }
 
@@ -697,15 +690,15 @@ where
     T: Add<T, Output = T>,
 {
     /// Normal elementwise addition of two matrices
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
-    /// 
+    ///
     /// x += y;
-    /// 
+    ///
     /// assert_eq!(&[[0, 11], [22, 33]], x.get_values());
     /// ```
     fn add_assign(&mut self, rhs: Matrix<T, R, C>) {
@@ -724,19 +717,20 @@ where
     type Output = Matrix<TO, R, C>;
 
     /// Normal elementwise subtraction of two matrices
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
-    /// 
+    ///
     /// let z = x - y;
-    /// 
+    ///
     /// assert_eq!(&[[0, -9], [-18, -27]], z.get_values());
     /// ```
     fn sub(self, rhs: Matrix<TR, R, C>) -> Self::Output {
-        let values: [[TO; C]; R] = match self.values
+        let values: [[TO; C]; R] = match self
+            .values
             .iter()
             .zip(rhs.values.iter())
             .map(|(c_lhs, c_rhs)| {
@@ -745,20 +739,20 @@ where
                     .zip(c_rhs.iter())
                     .map(|(lhs, rhs)| *lhs - *rhs)
                     .collect::<Vec<TO>>()
-                    .try_into() {
-                        Ok(result) => result,
-                        Err(_) => panic!("Should not happen"),
-                    }
+                    .try_into()
+                {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                }
             })
             .collect::<Vec<[TO; C]>>()
-            .try_into() {
-                Ok(result) => result,
-                Err(_) => panic!("Should not happen"),
-            };
+            .try_into()
+        {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
 
-        Self::Output {
-            values
-        }
+        Self::Output { values }
     }
 }
 
@@ -768,15 +762,15 @@ where
     T: Sub<T, Output = T>,
 {
     /// Normal elementwise subtraction of two matrices
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
-    /// 
+    ///
     /// x -= y;
-    /// 
+    ///
     /// assert_eq!(&[[0, -9], [-18, -27]], x.get_values());
     /// ```
     fn sub_assign(&mut self, rhs: Matrix<T, R, C>) {
@@ -785,7 +779,8 @@ where
     }
 }
 
-impl<TL, TR, TO, const R: usize, const K: usize, const C: usize> Mul<Matrix<TR, K, C>> for Matrix<TL, R, K>
+impl<TL, TR, TO, const R: usize, const K: usize, const C: usize> Mul<Matrix<TR, K, C>>
+    for Matrix<TL, R, K>
 where
     TL: Copy,
     TL: Mul<TR, Output = TO>,
@@ -796,30 +791,37 @@ where
     type Output = Matrix<TO, R, C>;
 
     /// Normal matrix multiplication
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
-    /// 
+    ///
     /// let z = x * y;
-    /// 
+    ///
     /// assert_eq!(&[[20, 30], [60, 110]], z.get_values());
     /// ```
     fn mul(self, rhs: Matrix<TR, K, C>) -> Self::Output {
-        let values: [[TO; C]; R] = 
-            match (0..R).map(|r| 
-            match (0..C).map(|c| 
-            (0..K).map(|k| self.values[r][k] * rhs.values[k][c]).sum()).collect::<Vec<TO>>().try_into() {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        }).collect::<Vec<[TO; C]>>().try_into() {
+        let values: [[TO; C]; R] = match (0..R)
+            .map(|r| {
+                match (0..C)
+                    .map(|c| (0..K).map(|k| self.values[r][k] * rhs.values[k][c]).sum())
+                    .collect::<Vec<TO>>()
+                    .try_into()
+                {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                }
+            })
+            .collect::<Vec<[TO; C]>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Self::Output {values}
+        Self::Output { values }
     }
 }
 
@@ -834,24 +836,28 @@ where
     type Output = VectorColumn<TO, R>;
 
     /// Right hand side vector multiplication
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
-    /// 
+    ///
     /// let z = x * y;
-    /// 
+    ///
     /// assert_eq!(&[10, 30], z.get_values());
     /// ```
     fn mul(self, rhs: VectorColumn<TR, C>) -> Self::Output {
-        let values: [TO; R] = match (0..R).map(|r| (0..C).map(|c| self.values[r][c] * rhs.values[c]).sum()).collect::<Vec<TO>>().try_into() {
+        let values: [TO; R] = match (0..R)
+            .map(|r| (0..C).map(|c| self.values[r][c] * rhs.values[c]).sum())
+            .collect::<Vec<TO>>()
+            .try_into()
+        {
             Ok(result) => result,
             Err(_) => panic!("Should not happen"),
         };
 
-        Self::Output {values}
+        Self::Output { values }
     }
 }
 
@@ -866,39 +872,40 @@ where
     type Output = Matrix<TO, R, C>;
 
     /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = 10;
-    /// 
+    ///
     /// let z = x * y;
-    /// 
+    ///
     /// assert_eq!(&[[0, 10], [20, 30]], z.get_values());
     /// ```
     fn mul(self, rhs: TR) -> Self::Output {
-        let values: [[TO; C]; R] = match self.values
+        let values: [[TO; C]; R] = match self
+            .values
             .iter()
             .map(|column| {
                 match column
                     .iter()
                     .map(|value| *value * rhs)
                     .collect::<Vec<TO>>()
-                    .try_into() {
-                        Ok(result) => result,
-                        Err(_) => panic!("Should not happen"),
-                    }
+                    .try_into()
+                {
+                    Ok(result) => result,
+                    Err(_) => panic!("Should not happen"),
+                }
             })
             .collect::<Vec<[TO; C]>>()
-            .try_into() {
-                Ok(result) => result,
-                Err(_) => panic!("Should not happen"),
-            };
+            .try_into()
+        {
+            Ok(result) => result,
+            Err(_) => panic!("Should not happen"),
+        };
 
-        Self::Output {
-            values
-        }
+        Self::Output { values }
     }
 }
 
@@ -909,15 +916,15 @@ where
     T: Sum,
 {
     /// Normal matrix multiplication
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
-    /// 
+    ///
     /// x *= y;
-    /// 
+    ///
     /// assert_eq!(&[[20, 30], [60, 110]], x.get_values());
     /// ```
     fn mul_assign(&mut self, rhs: Matrix<T, S, S>) {
@@ -933,15 +940,15 @@ where
     T: Num,
 {
     /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
-    /// 
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
     /// let y = 10;
-    /// 
+    ///
     /// x *= y;
-    /// 
+    ///
     /// assert_eq!(&[[0, 10], [20, 30]], x.get_values());
     /// ```
     fn mul_assign(&mut self, rhs: T) {
@@ -954,16 +961,16 @@ where
 mod tests {
     use super::*;
 
-    fn check_close<const R: usize, const C: usize>(lhs: &[[f64; C]; R], rhs: &[[f64; C]; R], tolerance: f64) -> bool {
-        lhs.iter()
-            .zip(rhs.iter())
-            .all(|(lhs, rhs)| {
-                lhs.iter()
-                    .zip(rhs.iter())
-                    .all(|(&lhs, &rhs)| {
-                        (lhs - rhs).abs() < tolerance
-                    })
-            })
+    fn check_close<const R: usize, const C: usize>(
+        lhs: &[[f64; C]; R],
+        rhs: &[[f64; C]; R],
+        tolerance: f64,
+    ) -> bool {
+        lhs.iter().zip(rhs.iter()).all(|(lhs, rhs)| {
+            lhs.iter()
+                .zip(rhs.iter())
+                .all(|(&lhs, &rhs)| (lhs - rhs).abs() < tolerance)
+        })
     }
 
     #[test]
@@ -1006,8 +1013,17 @@ mod tests {
 
     #[test]
     fn matrix_of_matrix() {
-        let result = Matrix::new([[Matrix::new([[1, 0], [0, 1]])], [Matrix::new([[0, 1], [-1, 0]])]]);
-        assert_eq!([[Matrix::new([[1, 0], [0, 1]])], [Matrix::new([[0, 1], [-1, 0]])]], result.values);
+        let result = Matrix::new([
+            [Matrix::new([[1, 0], [0, 1]])],
+            [Matrix::new([[0, 1], [-1, 0]])],
+        ]);
+        assert_eq!(
+            [
+                [Matrix::new([[1, 0], [0, 1]])],
+                [Matrix::new([[0, 1], [-1, 0]])]
+            ],
+            result.values
+        );
     }
 
     #[test]
@@ -1044,28 +1060,44 @@ mod tests {
 
     #[test]
     fn sum() {
-        let list: [Matrix<i32, 2, 2>; 3] = [Matrix::new([[0, 1], [2, 3]]), Matrix::new([[0, 10], [20, 30]]), Matrix::new([[0, 100], [200, 300]])];
+        let list: [Matrix<i32, 2, 2>; 3] = [
+            Matrix::new([[0, 1], [2, 3]]),
+            Matrix::new([[0, 10], [20, 30]]),
+            Matrix::new([[0, 100], [200, 300]]),
+        ];
         let result: Matrix<i32, 2, 2> = list.into_iter().sum();
         assert_eq!([[0, 111], [222, 333]], result.values);
     }
 
     #[test]
     fn sum_ref() {
-        let list: [Matrix<i32, 2, 2>; 3] = [Matrix::new([[0, 1], [2, 3]]), Matrix::new([[0, 10], [20, 30]]), Matrix::new([[0, 100], [200, 300]])];
+        let list: [Matrix<i32, 2, 2>; 3] = [
+            Matrix::new([[0, 1], [2, 3]]),
+            Matrix::new([[0, 10], [20, 30]]),
+            Matrix::new([[0, 100], [200, 300]]),
+        ];
         let result: Matrix<i32, 2, 2> = list.into_iter().sum();
         assert_eq!([[0, 111], [222, 333]], result.values);
     }
 
     #[test]
     fn product() {
-        let list: [Matrix<i32, 2, 2>; 3] = [Matrix::new([[0, 1], [2, 3]]), Matrix::new([[4, 5], [6, 7]]), Matrix::new([[8, 9], [10, 11]])];
+        let list: [Matrix<i32, 2, 2>; 3] = [
+            Matrix::new([[0, 1], [2, 3]]),
+            Matrix::new([[4, 5], [6, 7]]),
+            Matrix::new([[8, 9], [10, 11]]),
+        ];
         let result: Matrix<i32, 2, 2> = list.into_iter().product();
         assert_eq!([[118, 131], [518, 575]], result.values);
     }
 
     #[test]
     fn product_ref() {
-        let list: [Matrix<i32, 2, 2>; 3] = [Matrix::new([[0, 1], [2, 3]]), Matrix::new([[4, 5], [6, 7]]), Matrix::new([[8, 9], [10, 11]])];
+        let list: [Matrix<i32, 2, 2>; 3] = [
+            Matrix::new([[0, 1], [2, 3]]),
+            Matrix::new([[4, 5], [6, 7]]),
+            Matrix::new([[8, 9], [10, 11]]),
+        ];
         let result: Matrix<i32, 2, 2> = list.iter().product();
         assert_eq!([[118, 131], [518, 575]], result.values);
     }
@@ -1107,7 +1139,7 @@ mod tests {
         let matrix1 = Matrix::new([[0, 1, 2, 3], [4, 5, 6, 7]]);
         let matrix2 = Matrix::new([[0, 10, 20], [30, 40, 50], [60, 70, 80], [90, 100, 110]]);
         let result = matrix1 * matrix2;
-        assert_eq!([[420, 480, 540], [1140, 1360, 1580]], result.values);    
+        assert_eq!([[420, 480, 540], [1140, 1360, 1580]], result.values);
     }
 
     #[test]
@@ -1115,7 +1147,7 @@ mod tests {
         let mut matrix1 = Matrix::new([[0, 1], [2, 3]]);
         let matrix2 = Matrix::new([[0, 10], [20, 30]]);
         matrix1 *= matrix2;
-        assert_eq!([[20, 30], [60, 110]], matrix1.values);    
+        assert_eq!([[20, 30], [60, 110]], matrix1.values);
     }
 
     #[test]
@@ -1130,14 +1162,14 @@ mod tests {
     fn scalar_mul() {
         let matrix = Matrix::new([[0, 1, 2]]);
         let result = matrix * 4;
-        assert_eq!([[0, 4, 8]], result.values);    
+        assert_eq!([[0, 4, 8]], result.values);
     }
 
     #[test]
     fn scalar_mul_assign() {
         let mut matrix = Matrix::new([[0, 1, 2]]);
         matrix *= 4;
-        assert_eq!([[0, 4, 8]], matrix.values);    
+        assert_eq!([[0, 4, 8]], matrix.values);
     }
 
     #[test]
@@ -1149,15 +1181,31 @@ mod tests {
 
     #[test]
     fn hermitian_conjugate() {
-        let matrix = Matrix::new([[Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)], [Complex::new(1, 1), Complex::new(-1, 0), Complex::new(0, -1)]]);
+        let matrix = Matrix::new([
+            [Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)],
+            [Complex::new(1, 1), Complex::new(-1, 0), Complex::new(0, -1)],
+        ]);
         let result = matrix.transpose();
-        assert_eq!([[Complex::new(0, 0), Complex::new(1, 1)], [Complex::new(1, 0), Complex::new(-1, 0)], [Complex::new(0, 1), Complex::new(0, -1)]], result.values);
+        assert_eq!(
+            [
+                [Complex::new(0, 0), Complex::new(1, 1)],
+                [Complex::new(1, 0), Complex::new(-1, 0)],
+                [Complex::new(0, 1), Complex::new(0, -1)]
+            ],
+            result.values
+        );
     }
 
     #[test]
     fn is_hermitian() {
-        let matrix1 = Matrix::new([[Complex::new(1, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(0, 0)]]);
-        let matrix2 = Matrix::new([[Complex::new(1, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(0, 1)]]);
+        let matrix1 = Matrix::new([
+            [Complex::new(1, 0), Complex::new(0, 1)],
+            [Complex::new(0, -1), Complex::new(0, 0)],
+        ]);
+        let matrix2 = Matrix::new([
+            [Complex::new(1, 0), Complex::new(0, 1)],
+            [Complex::new(0, -1), Complex::new(0, 1)],
+        ]);
         assert_eq!(true, matrix1.is_hermitian());
         assert_eq!(false, matrix2.is_hermitian());
     }
@@ -1176,8 +1224,21 @@ mod tests {
         let matrix2 = Matrix::new([[4, 5], [7, 4]]);
         let matrix3 = Matrix::new([[3, 9, 4], [6, 3, 6], [1, 6, 1]]);
         let matrix4 = Matrix::new([[3, 5, 8, 3], [8, 8, 4, 4], [9, 3, 1, 6], [7, 3, 8, 6]]);
-        let matrix5 = Matrix::new([[9, 2, 7, 5, 6], [0, 0, 9, 3, 6], [0, 9, 8, 7, 8], [3, 9, 1, 5, 9], [1, 2, 2, 2, 7]]);
-        let matrix6 = Matrix::new([[9, 0, 8, 0, 1, 0], [5, 2, 3, 1, 2, 3], [4, 1, 1, 1, 6, 3], [5, 2, 8, 8, 8, 2], [8, 8, 6, 8, 9, 6], [8, 3, 7, 2, 2, 5]]);
+        let matrix5 = Matrix::new([
+            [9, 2, 7, 5, 6],
+            [0, 0, 9, 3, 6],
+            [0, 9, 8, 7, 8],
+            [3, 9, 1, 5, 9],
+            [1, 2, 2, 2, 7],
+        ]);
+        let matrix6 = Matrix::new([
+            [9, 0, 8, 0, 1, 0],
+            [5, 2, 3, 1, 2, 3],
+            [4, 1, 1, 1, 6, 3],
+            [5, 2, 8, 8, 8, 2],
+            [8, 8, 6, 8, 9, 6],
+            [8, 3, 7, 2, 2, 5],
+        ]);
         assert_eq!(5, matrix1.determinant());
         assert_eq!(-19, matrix2.determinant());
         assert_eq!(33, matrix3.determinant());
@@ -1191,15 +1252,79 @@ mod tests {
         let matrix1 = Matrix::new([[5.0]]);
         let matrix2 = Matrix::new([[4.0, 5.0], [7.0, 4.0]]);
         let matrix3 = Matrix::new([[3.0, 9.0, 4.0], [6.0, 3.0, 6.0], [1.0, 6.0, 1.0]]);
-        let matrix4 = Matrix::new([[3.0, 5.0, 8.0, 3.0], [8.0, 8.0, 4.0, 4.0], [9.0, 3.0, 1.0, 6.0], [7.0, 3.0, 8.0, 6.0]]);
-        let matrix5 = Matrix::new([[9.0, 2.0, 7.0, 5.0, 6.0], [0.0, 0.0, 9.0, 3.0, 6.0], [0.0, 9.0, 8.0, 7.0, 8.0], [3.0, 9.0, 1.0, 5.0, 9.0], [1.0, 2.0, 2.0, 2.0, 7.0]]);
-        let matrix6 = Matrix::new([[9.0, 0.0, 8.0, 0.0, 1.0, 0.0], [5.0, 2.0, 3.0, 1.0, 2.0, 3.0], [4.0, 1.0, 1.0, 1.0, 6.0, 3.0], [5.0, 2.0, 8.0, 8.0, 8.0, 2.0], [8.0, 8.0, 6.0, 8.0, 9.0, 6.0], [8.0, 3.0, 7.0, 2.0, 2.0, 5.0]]);
-        assert!(check_close(matrix1.inverse().unwrap().get_values(), &[[0.2]], 1e-5));
-        assert!(check_close(matrix2.inverse().unwrap().get_values(), &[[-0.210526, 0.263158], [0.368421, -0.210526]], 1e-5));
-        assert!(check_close(matrix3.inverse().unwrap().get_values(), &[[-1.0, 0.454545, 1.27273], [0.0, -0.030303, 0.181818], [1.0, -0.272727, -1.36364]], 1e-5));
-        assert!(check_close(matrix4.inverse().unwrap().get_values(), &[[-0.926471, 0.540441, -0.632353, 0.735294], [0.455882, -0.0992647, 0.279412, -0.441176], [-0.264706, 0.154412, -0.323529, 0.352941], [1.20588, -0.786765, 1.02941, -0.941176]], 1e-5));
-        assert!(check_close(matrix5.inverse().unwrap().get_values(), &[[0.0210325, 0.335883, -0.328872, 0.432122, -0.48566], [-0.225621, 0.912046, -0.65392, 1.09178, -1.24474], [-0.137667, 0.771192, -0.483748, 0.717017, -0.912046], [0.493308, -2.15233, 1.6501, -2.31931, 2.51816], [-0.040153, 0.0860421, -0.0994264, 0.08413, 0.108987]], 1e-5));
-        assert!(check_close(matrix6.inverse().unwrap().get_values(), &[[-0.0237131, 1.81029, -0.32273, 0.175824, -0.172932, -0.75535], [0.187392, -1.50087, 0.1845, -0.340659, 0.390977, 0.456912], [0.137941, -1.89647, 0.316368, -0.181319, 0.176692, 0.80856], [-0.224407, 2.20474, -0.541932, 0.395604, -0.270677, -0.831116], [0.10989, -1.12088, 0.373626, -0.131868, 0.142857, 0.32967], [-0.221805, 0.225564, 0.0300752, 0.0714286, -0.154135, 0.203008]], 1e-5));
+        let matrix4 = Matrix::new([
+            [3.0, 5.0, 8.0, 3.0],
+            [8.0, 8.0, 4.0, 4.0],
+            [9.0, 3.0, 1.0, 6.0],
+            [7.0, 3.0, 8.0, 6.0],
+        ]);
+        let matrix5 = Matrix::new([
+            [9.0, 2.0, 7.0, 5.0, 6.0],
+            [0.0, 0.0, 9.0, 3.0, 6.0],
+            [0.0, 9.0, 8.0, 7.0, 8.0],
+            [3.0, 9.0, 1.0, 5.0, 9.0],
+            [1.0, 2.0, 2.0, 2.0, 7.0],
+        ]);
+        let matrix6 = Matrix::new([
+            [9.0, 0.0, 8.0, 0.0, 1.0, 0.0],
+            [5.0, 2.0, 3.0, 1.0, 2.0, 3.0],
+            [4.0, 1.0, 1.0, 1.0, 6.0, 3.0],
+            [5.0, 2.0, 8.0, 8.0, 8.0, 2.0],
+            [8.0, 8.0, 6.0, 8.0, 9.0, 6.0],
+            [8.0, 3.0, 7.0, 2.0, 2.0, 5.0],
+        ]);
+        assert!(check_close(
+            matrix1.inverse().unwrap().get_values(),
+            &[[0.2]],
+            1e-5
+        ));
+        assert!(check_close(
+            matrix2.inverse().unwrap().get_values(),
+            &[[-0.210526, 0.263158], [0.368421, -0.210526]],
+            1e-5
+        ));
+        assert!(check_close(
+            matrix3.inverse().unwrap().get_values(),
+            &[
+                [-1.0, 0.454545, 1.27273],
+                [0.0, -0.030303, 0.181818],
+                [1.0, -0.272727, -1.36364]
+            ],
+            1e-5
+        ));
+        assert!(check_close(
+            matrix4.inverse().unwrap().get_values(),
+            &[
+                [-0.926471, 0.540441, -0.632353, 0.735294],
+                [0.455882, -0.0992647, 0.279412, -0.441176],
+                [-0.264706, 0.154412, -0.323529, 0.352941],
+                [1.20588, -0.786765, 1.02941, -0.941176]
+            ],
+            1e-5
+        ));
+        assert!(check_close(
+            matrix5.inverse().unwrap().get_values(),
+            &[
+                [0.0210325, 0.335883, -0.328872, 0.432122, -0.48566],
+                [-0.225621, 0.912046, -0.65392, 1.09178, -1.24474],
+                [-0.137667, 0.771192, -0.483748, 0.717017, -0.912046],
+                [0.493308, -2.15233, 1.6501, -2.31931, 2.51816],
+                [-0.040153, 0.0860421, -0.0994264, 0.08413, 0.108987]
+            ],
+            1e-5
+        ));
+        assert!(check_close(
+            matrix6.inverse().unwrap().get_values(),
+            &[
+                [-0.0237131, 1.81029, -0.32273, 0.175824, -0.172932, -0.75535],
+                [0.187392, -1.50087, 0.1845, -0.340659, 0.390977, 0.456912],
+                [0.137941, -1.89647, 0.316368, -0.181319, 0.176692, 0.80856],
+                [-0.224407, 2.20474, -0.541932, 0.395604, -0.270677, -0.831116],
+                [0.10989, -1.12088, 0.373626, -0.131868, 0.142857, 0.32967],
+                [-0.221805, 0.225564, 0.0300752, 0.0714286, -0.154135, 0.203008]
+            ],
+            1e-5
+        ));
 
         let matrix_singular = Matrix::new([[2.0, 3.0], [4.0, 6.0]]);
         assert_eq!(matrix_singular.inverse(), None);

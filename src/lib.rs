@@ -1,5 +1,5 @@
 //! This library is a static sized linear algebra library.
-//! 
+//!
 //! It contains matrices and vectors whose sizes must all be known at compile time
 //! and allows a multiplication and other operation between these.
 //! All size compatibilities are checked at compile time.
