@@ -328,10 +328,16 @@ where
     /// use num::traits::identities::Zero;
     ///
     /// let x = static_linear_algebra::VectorRow::<i32, _>::from([0, 0, 0]);
-    /// let y = static_linear_algebra::VectorRow::<i32, _>::from([1, 0, 0]);
     ///
     /// assert!(x.is_zero());
-    /// assert!(!y.is_zero());
+    /// ```
+    /// 
+    /// ```
+    /// use num::traits::identities::Zero;
+    ///
+    /// let x = static_linear_algebra::VectorRow::<i32, _>::from([1, 0, 0]);
+    ///
+    /// assert!(!x.is_zero());
     /// ```
     fn is_zero(&self) -> bool {
         return self.values.iter().all(|&i| i == T::zero());

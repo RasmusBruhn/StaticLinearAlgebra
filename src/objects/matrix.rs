@@ -90,6 +90,30 @@ where
 impl<T, const S: usize> Matrix<T, S, S>
 where
     T: Copy + Debug + PartialEq,
+{
+    /// Checks if the matrix is symmetric (the matrix is equal to its own transpose)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [1, 2]]);
+    ///
+    /// assert_eq!(true, x.is_symmetric());
+    /// ```
+    ///
+    /// ```
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 1]]);
+    ///
+    /// assert_eq!(false, x.is_symmetric());
+    /// ```
+    pub fn is_symmetric(&self) -> bool {
+        return (0..S).all(|r| (0..r).all(|c| self.values[r][c] == self.values[c][r]));
+    }
+}
+
+impl<T, const S: usize> Matrix<T, S, S>
+where
+    T: Copy + Debug + PartialEq,
     T: Zero + One,
 {
     /// Initializes a diagonal matrix where the diagonal contains ones
@@ -108,7 +132,7 @@ where
 
 impl<T, const R: usize, const C: usize> Matrix<Complex<T>, R, C>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Num,
     T: Neg<Output = T>,
 {
@@ -126,56 +150,23 @@ where
     /// assert_eq!(&[[Complex::new(1, 0), Complex::new(0, -3)], [Complex::new(0, -2), Complex::new(0, -4)]], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> Matrix<Complex<T>, C, R> {
-        let values: [[Complex<T>; R]; C] = match (0..C)
+        let values: [[Complex<T>; R]; C] = (0..C)
             .map(|r| {
-                match (0..R)
+                (0..R)
                     .map(|c| self.values[c][r].conj())
-                    .collect::<Vec<Complex<T>>>()
-                    .try_into()
-                {
-                    Ok(result) => result,
-                    Err(_) => panic!("Should not happen"),
-                }
+                    .collect_array()
+                    .expect("Should not happen")
             })
-            .collect::<Vec<[Complex<T>; R]>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+            .collect_array()
+            .expect("Should not happen");
 
-        Matrix { values }
-    }
-}
-
-impl<T, const S: usize> Matrix<T, S, S>
-where
-    T: Copy,
-    T: PartialEq,
-{
-    /// Checks if the matrix is symmetric (the matrix is equal to its own transpose)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let x = static_linear_algebra::Matrix::from([[0, 1], [1, 2]]);
-    ///
-    /// assert_eq!(true, x.is_symmetric());
-    /// ```
-    ///
-    /// ```
-    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 1]]);
-    ///
-    /// assert_eq!(false, x.is_symmetric());
-    /// ```
-    pub fn is_symmetric(&self) -> bool {
-        (0..S).all(|r| (0..r + 1).all(|c| self.values[r][c] == self.values[c][r]))
+        return Matrix { values };
     }
 }
 
 impl<T, const S: usize> Matrix<Complex<T>, S, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Num,
     T: Neg<Output = T>,
 {
@@ -188,7 +179,7 @@ where
     ///
     /// let x = static_linear_algebra::Matrix::from([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
     ///
-    /// assert_eq!(true, x.is_hermitian());
+    /// assert!(x.is_hermitian());
     /// ```
     ///
     /// ```
@@ -196,23 +187,22 @@ where
     ///
     /// let x = static_linear_algebra::Matrix::from([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
     ///
-    /// assert_eq!(false, x.is_hermitian());
+    /// assert!(!x.is_hermitian());
     /// ```
     pub fn is_hermitian(&self) -> bool {
-        (0..S).all(|r| (0..r + 1).all(|c| self.values[r][c] == self.values[c][r].conj()))
+        return (0..S).all(|r| (0..r + 1).all(|c| self.values[r][c] == self.values[c][r].conj()));
     }
 }
 
 impl<T, const S: usize> Matrix<T, S, S>
 where
-    T: Copy,
-    T: Mul<T, Output = T>,
+    T: Copy + Debug + PartialEq,
+    T: Mul<T, Output = T> + Add<Output = T> + Sub<Output = T> + Neg<Output = T>,
     T: Sum,
-    T: Add<Output = T>,
-    T: Sub<Output = T>,
-    T: Neg<Output = T>,
+    T: One,
 {
-    /// Calculates the determinant for the matrix
+    /// Calculates the determinant for the matrix using the direct equation,
+    /// does not scale well for large matrices
     ///
     /// # Examples
     ///
@@ -222,126 +212,101 @@ where
     /// assert_eq!(x.determinant(), -2.0)
     /// ```
     pub fn determinant(&self) -> T {
-        match S {
-            1 => self.values[0][0],
-            2 => self.values[0][0] * self.values[1][1] - self.values[0][1] * self.values[1][0],
-            3 => {
-                self.values[0][0]
-                    * (self.values[1][1] * self.values[2][2]
-                        - self.values[1][2] * self.values[2][1])
-                    - self.values[0][1]
-                        * (self.values[1][0] * self.values[2][2]
-                            - self.values[1][2] * self.values[2][0])
-                    + self.values[0][2]
-                        * (self.values[1][0] * self.values[2][1]
-                            - self.values[1][1] * self.values[2][0])
-            }
-            4 => {
-                self.values[0][0]
-                    * (self.values[1][1]
-                        * (self.values[2][2] * self.values[3][3]
-                            - self.values[2][3] * self.values[3][2])
-                        - self.values[1][2]
-                            * (self.values[2][1] * self.values[3][3]
-                                - self.values[2][3] * self.values[3][1])
-                        + self.values[1][3]
-                            * (self.values[2][1] * self.values[3][2]
-                                - self.values[2][2] * self.values[3][1]))
-                    - self.values[0][1]
-                        * (self.values[1][0]
-                            * (self.values[2][2] * self.values[3][3]
-                                - self.values[2][3] * self.values[3][2])
-                            - self.values[1][2]
-                                * (self.values[2][0] * self.values[3][3]
-                                    - self.values[2][3] * self.values[3][0])
-                            + self.values[1][3]
-                                * (self.values[2][0] * self.values[3][2]
-                                    - self.values[2][2] * self.values[3][0]))
-                    + self.values[0][2]
-                        * (self.values[1][0]
-                            * (self.values[2][1] * self.values[3][3]
-                                - self.values[2][3] * self.values[3][1])
-                            - self.values[1][1]
-                                * (self.values[2][0] * self.values[3][3]
-                                    - self.values[2][3] * self.values[3][0])
-                            + self.values[1][3]
-                                * (self.values[2][0] * self.values[3][1]
-                                    - self.values[2][1] * self.values[3][0]))
-                    - self.values[0][3]
-                        * (self.values[1][0]
-                            * (self.values[2][1] * self.values[3][2]
-                                - self.values[2][2] * self.values[3][1])
-                            - self.values[1][1]
-                                * (self.values[2][0] * self.values[3][2]
-                                    - self.values[2][2] * self.values[3][0])
-                            + self.values[1][2]
-                                * (self.values[2][0] * self.values[3][1]
-                                    - self.values[2][1] * self.values[3][0]))
-            }
-            _ => determinant_step(&self.values, &[true; S]),
-        }
+        assert_ne!(S, 0);
+
+        return match S {
+            1 => self.determinant_1(),
+            2 => self.determinant_2(),
+            3 => self.determinant_3(),
+            4 => self.determinant_4(),
+            _ => self.determinant_n(),
+        };
     }
-}
 
-fn determinant_step<T, const S: usize>(data: &[[T; S]], unused: &[bool; S]) -> T
-where
-    T: Copy,
-    T: Mul<T, Output = T>,
-    T: Sum,
-    T: Neg<Output = T>,
-{
-    // Run through the first row and multiply unused values by subdeterminants of the next rows
-    data[0]
-        .iter()
-        .enumerate()
-        .zip(unused.iter())
-        .filter_map(|(value, &keep)| if keep { Some(value) } else { None })
-        .enumerate()
-        .map(|(sign, (location, &value))| {
-            if data.len() <= 1 {
-                // Just return the value
-                value
-            } else {
-                // Remove the current column from the unused columns list
-                let new_unused: [bool; S] = unused
-                    .iter()
-                    .enumerate()
-                    .map(|(keep_location, &keep)| {
-                        if keep_location == location {
-                            false
-                        } else {
-                            keep
-                        }
-                    })
-                    .collect::<Vec<bool>>()
-                    .try_into()
-                    .unwrap();
+    fn determinant_1(&self) -> T {
+        assert_eq!(S, 1);
 
-                // Calculate the sub determinant
-                let sub_det_value = determinant_step(&data[1..], &new_unused);
+        return self.values[0][0];
+    }
 
-                // Make sure the sign alternates
-                if sign % 2 == 0 {
-                    value * sub_det_value
-                } else {
-                    -value * sub_det_value
-                }
-            }
-        })
-        .sum::<T>()
+    fn determinant_2(&self) -> T {
+        assert_eq!(S, 2);
+
+        return self.values[0][0] * self.values[1][1] - self.values[0][1] * self.values[1][0];
+    }
+
+    fn determinant_3(&self) -> T {
+        assert_eq!(S, 3);
+
+        return self.values[0][0]
+            * (self.values[1][1] * self.values[2][2] - self.values[1][2] * self.values[2][1])
+            - self.values[0][1]
+                * (self.values[1][0] * self.values[2][2] - self.values[1][2] * self.values[2][0])
+            + self.values[0][2]
+                * (self.values[1][0] * self.values[2][1] - self.values[1][1] * self.values[2][0]);
+    }
+
+    fn determinant_4(&self) -> T {
+        assert_eq!(S, 4);
+
+        return self.values[0][0]
+            * (self.values[1][1]
+                * (self.values[2][2] * self.values[3][3] - self.values[2][3] * self.values[3][2])
+                - self.values[1][2]
+                    * (self.values[2][1] * self.values[3][3]
+                        - self.values[2][3] * self.values[3][1])
+                + self.values[1][3]
+                    * (self.values[2][1] * self.values[3][2]
+                        - self.values[2][2] * self.values[3][1]))
+            - self.values[0][1]
+                * (self.values[1][0]
+                    * (self.values[2][2] * self.values[3][3]
+                        - self.values[2][3] * self.values[3][2])
+                    - self.values[1][2]
+                        * (self.values[2][0] * self.values[3][3]
+                            - self.values[2][3] * self.values[3][0])
+                    + self.values[1][3]
+                        * (self.values[2][0] * self.values[3][2]
+                            - self.values[2][2] * self.values[3][0]))
+            + self.values[0][2]
+                * (self.values[1][0]
+                    * (self.values[2][1] * self.values[3][3]
+                        - self.values[2][3] * self.values[3][1])
+                    - self.values[1][1]
+                        * (self.values[2][0] * self.values[3][3]
+                            - self.values[2][3] * self.values[3][0])
+                    + self.values[1][3]
+                        * (self.values[2][0] * self.values[3][1]
+                            - self.values[2][1] * self.values[3][0]))
+            - self.values[0][3]
+                * (self.values[1][0]
+                    * (self.values[2][1] * self.values[3][2]
+                        - self.values[2][2] * self.values[3][1])
+                    - self.values[1][1]
+                        * (self.values[2][0] * self.values[3][2]
+                            - self.values[2][2] * self.values[3][0])
+                    + self.values[1][2]
+                        * (self.values[2][0] * self.values[3][1]
+                            - self.values[2][1] * self.values[3][0]));
+    }
+
+    fn determinant_n(&self) -> T {
+        assert_ne!(S, 0);
+
+        return determinant_step(&self.values, &[true; S], S);
+    }
 }
 
 impl<T, const S: usize> Matrix<T, S, S>
 where
-    T: Copy,
-    T: Mul<T, Output = T>,
-    T: Div<T, Output = T>,
+    T: Copy + Debug + PartialEq,
+    T: Mul<T, Output = T>
+        + Div<T, Output = T>
+        + Add<Output = T>
+        + Sub<Output = T>
+        + Neg<Output = T>,
     T: Sum,
-    T: Add<Output = T>,
-    T: Sub<Output = T>,
-    T: Neg<Output = T>,
-    T: Zero,
-    T: One,
+    T: Zero + One,
 {
     /// Calculates the inverse for the matrix
     ///
@@ -353,53 +318,90 @@ where
     /// assert_eq!(x.inverse().unwrap().get_values(), &[[-2.0, 1.0], [1.5, -0.5]])
     /// ```
     pub fn inverse(&self) -> Option<Self> {
-        // Get the determinant and make sure it is not zero
         let det = self.determinant();
         if det.is_zero() {
             return None;
         }
 
-        // Calculate the inverse
-        let values: [[T; S]; S] = array::from_fn(|row| {
-            let unused: [bool; S] = array::from_fn(|unused_column| unused_column != row);
-            array::from_fn(|column| {
-                let value = sub_determinant_step(&self.values, &unused, column) / det;
-                if (row + column) % 2 == 0 {
-                    value
-                } else {
-                    -value
-                }
-            })
-        });
+        return match S {
+            1 => Some(self.inverse_1(det)),
+            _ => Some(self.inverse_n(det)),
+        };
+    }
 
-        Some(Self { values })
+    fn inverse_1(&self, det: T) -> Self {
+        assert_eq!(S, 1);
+
+        return Self {
+            values: [[T::one() / det]
+                .into_iter()
+                .collect_array()
+                .expect("Should not happen")]
+            .into_iter()
+            .collect_array()
+            .expect("Should not happen"),
+        };
+    }
+
+    fn inverse_n(&self, det: T) -> Self {
+        let values = (0..S)
+            .map(|r| {
+                let unused = (0..S)
+                    .map(|unused_column| unused_column != r)
+                    .collect_array()
+                    .expect("Should not happen");
+
+                return (0..S)
+                    .map(|c| {
+                        let value = determinant_step(&self.values, &unused, c) / det;
+                        if (r + c) % 2 == 0 {
+                            value
+                        } else {
+                            -value
+                        }
+                    })
+                    .collect_array()
+                    .expect("Should not happen");
+            })
+            .collect_array()
+            .expect("Should not happen");
+
+        return Self { values };
     }
 }
 
-fn sub_determinant_step<T, const S: usize>(
-    data: &[[T; S]],
-    unused: &[bool; S],
-    skip_line: usize,
-) -> T
+/// Calculates one step of the determinant for a matrix
+///
+/// # Parameters
+///
+/// data: The data of the matrix to calculate the determinant for, already used
+/// rows from previous steps should not be included
+///
+/// unused: A boolean array indicating which columns are still available for use
+/// in the determinant calculation
+///
+/// skip_row: A row to skip in the determinant calculation
+fn determinant_step<T, const S: usize>(data: &[[T; S]], unused: &[bool; S], skip_row: usize) -> T
 where
-    T: Copy,
-    T: Mul<T, Output = T>,
+    T: Copy + Debug + PartialEq,
+    T: Mul<T, Output = T> + Neg<Output = T>,
     T: Sum,
-    T: Neg<Output = T>,
     T: One,
 {
-    // Stop if done
+    assert_ne!(S, 0);
+
+    // Try to skip line
+    if skip_row == 0 {
+        return determinant_step(&data[1..], unused, data.len());
+    }
+
+    // Stop if it is done
     if data.is_empty() {
         return T::one();
     }
 
-    // Try to skip line
-    if skip_line == 0 {
-        return sub_determinant_step(&data[1..], unused, data.len());
-    }
-
     // Run through the first row and multiply unused values by subdeterminants of the next rows
-    data[0]
+    return data[0]
         .iter()
         .enumerate()
         .zip(unused.iter())
@@ -407,7 +409,7 @@ where
         .enumerate()
         .map(|(sign, (location, &value))| {
             // Remove the current column from the unused columns list
-            let new_unused: [bool; S] = unused
+            let new_unused = unused
                 .iter()
                 .enumerate()
                 .map(|(keep_location, &keep)| {
@@ -417,12 +419,11 @@ where
                         keep
                     }
                 })
-                .collect::<Vec<bool>>()
-                .try_into()
-                .unwrap();
+                .collect_array()
+                .expect("Should not happen");
 
             // Calculate the sub determinant
-            let sub_det_value = sub_determinant_step(&data[1..], &new_unused, skip_line - 1);
+            let sub_det_value = determinant_step(&data[1..], &new_unused, skip_row - 1);
 
             // Make sure the sign alternates
             if sign % 2 == 0 {
@@ -431,7 +432,7 @@ where
                 -value * sub_det_value
             }
         })
-        .sum::<T>()
+        .sum::<T>();
 }
 
 impl<T, const R: usize, const C: usize> From<[[T; C]; R]> for Matrix<T, R, C>
@@ -545,6 +546,72 @@ where
         let values = [*value.get_values()];
 
         return Self { values };
+    }
+}
+
+impl<T, const R: usize, const C: usize> Into<[[T; C]; R]> for Matrix<T, R, C>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Converts a matrix into the array of its data
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let matrix = static_linear_algebra::Matrix::from([[1, 2], [3, 4]]);
+    /// let array = matrix.into();
+    ///
+    /// assert_eq!([[1, 2], [3, 4]], array);
+    /// ```
+    fn into(self) -> [[T; C]; R] {
+        return self.values;
+    }
+}
+
+impl<T, const S: usize> Into<VectorColumn<T, S>> for Matrix<T, S, 1>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Converts a matrix into a column vector
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let matrix = static_linear_algebra::Matrix::from([[1], [2]]);
+    /// let vector = matrix.into();
+    ///
+    /// assert_eq!(&[1, 2], vector.get_values());
+    /// ```
+    fn into(self) -> VectorColumn<T, S> {
+        let values = self
+            .values
+            .iter()
+            .map(|x| x[0])
+            .collect_array()
+            .expect("Should not happen");
+
+        return VectorColumn::from(values);
+    }
+}
+
+impl<T, const S: usize> Into<VectorRow<T, S>> for Matrix<T, 1, S>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Converts a matrix into a column vector
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let matrix = static_linear_algebra::Matrix::from([[1, 2]]);
+    /// let vector = matrix.into();
+    ///
+    /// assert_eq!(&[1, 2], vector.get_values());
+    /// ```
+    fn into(self) -> VectorRow<T, S> {
+        let values = self.values[0];
+
+        return VectorRow::from(values);
     }
 }
 
