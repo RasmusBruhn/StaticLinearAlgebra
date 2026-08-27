@@ -1,14 +1,16 @@
 //! Implementation and all methods on column vectors
 
-use super::{Matrix, VectorRow};
-use core::ops::Neg;
+use super::VectorRow;
+use itertools::Itertools;
 use num::{
     traits::{Num, Zero},
     Complex,
 };
 use std::{
+    convert::{From, Into},
+    fmt::Debug,
     iter::Sum,
-    ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 /// A static column vector type
@@ -19,57 +21,27 @@ use std::{
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct VectorColumn<T, const S: usize>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
 {
     pub(crate) values: [T; S],
 }
 
 impl<T, const S: usize> VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
 {
-    /// Initializes a new column vector with the given values
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1, 2]);
-    ///
-    /// assert_eq!(&[0, 1, 2], x.get_values());
-    /// ```
-    pub fn new(values: [T; S]) -> Self {
-        assert_ne!(S, 0);
-
-        Self { values }
-    }
-
-    /// Initializes a new column vector filled with a single value
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let x = static_linear_algebra::VectorColumn::<f32, 2>::from_value(1.);
-    ///
-    /// assert_eq!(&[1., 1.], x.get_values());
-    /// ```
-    pub fn from_value(value: T) -> Self {
-        assert_ne!(S, 0);
-
-        Self { values: [value; S] }
-    }
-
     /// Retrieves a reference to the data of the column vector
     ///
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let x = static_linear_algebra::VectorColumn::from([0, 1]);
     /// let data = x.get_values();
     ///
     /// assert_eq!(&[0, 1], data);
     /// ```
     pub fn get_values(&self) -> &[T; S] {
-        &self.values
+        return &self.values;
     }
 
     /// Retrieves a mutable reference to the data of the column vector
@@ -77,14 +49,106 @@ where
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
+    /// let mut x = static_linear_algebra::VectorColumn::from([0, 1]);
     /// let data = x.get_values_mut();
     /// data[0] = 5;
     ///
     /// assert_eq!(&[5, 1], x.get_values());
     /// ```
     pub fn get_values_mut(&mut self) -> &mut [T; S] {
-        &mut self.values
+        return &mut self.values;
+    }
+
+    /// Runs the given function on each element of the column vector and returns
+    /// a new column vector with the results
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::from([1, 2, 3]);
+    /// let y = x.elementwise(|v| v * 2);
+    ///
+    /// assert_eq!(&[2, 4, 6], y.get_values());
+    /// ```
+    pub fn elementwise<F>(&self, f: F) -> Self
+    where
+        F: Fn(T) -> T,
+    {
+        let values = self
+            .values
+            .iter()
+            .map(|&value| f(value))
+            .collect_array()
+            .expect("Should not happen");
+
+        return Self { values };
+    }
+
+    /// Runs the given function on each element of the column vector in place
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut x = static_linear_algebra::VectorColumn::from([1, 2, 3]);
+    /// x.elementwise_mut(|v| v * 2);
+    ///
+    /// assert_eq!(&[2, 4, 6], x.get_values());
+    /// ```
+    pub fn elementwise_mut<F>(&mut self, f: F)
+    where
+        F: Fn(T) -> T,
+    {
+        for value in &mut self.values {
+            *value = f(*value);
+        }
+    }
+
+    /// Runs the given operation on each pair of elements from two column
+    /// vectors and returns a new column vector with the results
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::from([1, 10]);
+    /// let z = x.elementwise_operation(&y, |a, b| a + b);
+    ///
+    /// assert_eq!(&[3, 30], z.get_values());
+    /// ```
+    pub fn elementwise_operation<F>(&self, rhs: &Self, f: F) -> Self
+    where
+        F: Fn(T, T) -> T,
+    {
+        let values = self
+            .values
+            .iter()
+            .zip(rhs.get_values().iter())
+            .map(|(&a, &b)| f(a, b))
+            .collect_array()
+            .expect("Should not happen");
+
+        return Self { values };
+    }
+
+    /// Runs the given operation on each pair of elements from two column
+    /// vectors in place of the first vector
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut x = static_linear_algebra::VectorColumn::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::from([1, 10]);
+    /// x.elementwise_operation_mut(&y, |a, b| a + b);
+    ///
+    /// assert_eq!(&[3, 30], x.get_values());
+    /// ```
+    pub fn elementwise_operation_mut<F>(&mut self, rhs: &Self, f: F)
+    where
+        F: Fn(T, T) -> T,
+    {
+        for (a, &b) in self.values.iter_mut().zip(rhs.get_values().iter()) {
+            *a = f(*a, b);
+        }
     }
 
     /// Transposes the column vector into a row vector
@@ -92,21 +156,21 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1, 2]);
+    /// let x = static_linear_algebra::VectorColumn::from([0, 1, 2]);
     /// let y = x.transpose();
     ///
     /// assert_eq!(&[0, 1, 2], y.get_values());
     /// ```
     pub fn transpose(&self) -> VectorRow<T, S> {
-        VectorRow {
+        return VectorRow {
             values: self.values,
-        }
+        };
     }
 }
 
 impl<T, const S: usize> VectorColumn<Complex<T>, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Num,
     T: Neg<Output = T>,
 {
@@ -118,104 +182,318 @@ where
     /// ```
     /// use num::Complex;
     ///
-    /// let x = static_linear_algebra::VectorColumn::new([Complex::new(1, 0), Complex::new(0, 2)]);
+    /// let x = static_linear_algebra::VectorColumn::from([Complex::new(1, 0), Complex::new(0, 2)]);
     /// let y = x.hermitian_conjugate();
     ///
     /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> VectorRow<Complex<T>, S> {
-        let values: [Complex<T>; S] = match self
+        let values = self
             .values
             .iter()
             .map(|value| value.conj())
-            .collect::<Vec<Complex<T>>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+            .collect_array()
+            .expect("Should not happen");
 
-        VectorRow { values }
+        return VectorRow { values };
+    }
+}
+
+impl<T, const S: usize> From<[T; S]> for VectorColumn<T, S>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Constructs a column vector from an array of values
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::from([1, 2, 3]);
+    ///
+    /// assert_eq!(&[1, 2, 3], x.get_values());
+    /// ```
+    fn from(values: [T; S]) -> Self {
+        return Self { values };
+    }
+}
+
+impl<T, const S: usize> From<T> for VectorColumn<T, S>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Constructs a column vector with all elements equal to the given value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, 3>::from(5);
+    ///
+    /// assert_eq!(&[5, 5, 5], x.get_values());
+    /// ```
+    fn from(value: T) -> Self {
+        return Self { values: [value; S] };
+    }
+}
+
+impl<T, const S: usize> Into<[T; S]> for VectorColumn<T, S>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Converts the column vector into an array of values
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::from([1, 2, 3]);
+    /// let arr: [i32; 3] = x.into();
+    ///
+    /// assert_eq!([1, 2, 3], arr);
+    /// ```
+    fn into(self) -> [T; S] {
+        return self.values;
     }
 }
 
 impl<T, const S: usize> Index<usize> for VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
 {
     type Output = T;
 
+    /// Accesses an element of the column vector by index
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::from([0, 1, 2]);
+    ///
+    /// assert_eq!(0, x[0]);
+    /// assert_eq!(1, x[1]);
+    /// assert_eq!(2, x[2]);
+    /// ```
     fn index(&self, idx: usize) -> &Self::Output {
-        &self.values[idx]
+        return &self.values[idx];
     }
 }
 
 impl<T, const S: usize> IndexMut<usize> for VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
 {
+    /// Mutable access of an element of the column vector by index
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut x = static_linear_algebra::VectorColumn::from([0, 1, 2]);
+    ///
+    /// x[0] = 10;
+    /// x[1] = 20;
+    /// x[2] = 30;
+    ///
+    /// assert_eq!(10, x[0]);
+    /// assert_eq!(20, x[1]);
+    /// assert_eq!(30, x[2]);
+    /// ```
     fn index_mut(&mut self, idx: usize) -> &mut Self::Output {
-        &mut self.values[idx]
+        return &mut self.values[idx];
     }
 }
 
 impl<T, const S: usize> Zero for VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Zero,
-    T: PartialEq,
 {
+    /// Constructs a column vector with all elements equal to the zero element
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use num::traits::identities::Zero;
+    ///
+    /// let x = static_linear_algebra::VectorColumn::<i32, 3>::zero();
+    ///
+    /// assert_eq!(&[0, 0, 0], x.get_values());
+    /// ```
     fn zero() -> Self {
-        Self::from_value(T::zero())
+        return Self::from(T::zero());
     }
 
+    /// Checks if the column vector is a zero vector (all elements are zero)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use num::traits::identities::Zero;
+    ///
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([0, 0, 0]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 0, 0]);
+    ///
+    /// assert!(x.is_zero());
+    /// assert!(!y.is_zero());
+    /// ```
     fn is_zero(&self) -> bool {
-        (0..S).all(|i| self[i] == T::zero())
+        return self.values.iter().all(|&i| i == T::zero());
     }
 }
 
 impl<T, const S: usize> Sum for VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Zero,
     T: Add<T, Output = T>,
-    T: PartialEq,
 {
+    /// Performs an elementwise sum over all column vectors in an iterator
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let vectors = [
+    ///     static_linear_algebra::VectorColumn::from([1, 10, 100]),
+    ///     static_linear_algebra::VectorColumn::from([2, 20, 200]),
+    ///     static_linear_algebra::VectorColumn::from([3, 30, 300]),
+    /// ];
+    ///
+    /// let result = vectors.into_iter().sum::<static_linear_algebra::VectorColumn::<i32, _>>();
+    ///
+    /// assert_eq!(&[6, 60, 600], result.get_values());
+    /// ```
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         let mut result: Self = VectorColumn::zero();
 
         for value in iter {
-            result += value;
+            result = result + value;
         }
 
-        result
+        return result;
     }
 }
 
 impl<'a, T, const S: usize> Sum<&'a VectorColumn<T, S>> for VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Zero,
     T: Add<T, Output = T>,
-    T: PartialEq,
 {
+    /// Performs an elementwise sum over all column vectors in an iterator
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let vectors = [
+    ///     static_linear_algebra::VectorColumn::from([1, 10, 100]),
+    ///     static_linear_algebra::VectorColumn::from([2, 20, 200]),
+    ///     static_linear_algebra::VectorColumn::from([3, 30, 300]),
+    /// ];
+    ///
+    /// let result = vectors.iter().sum::<static_linear_algebra::VectorColumn::<i32, _>>();
+    ///
+    /// assert_eq!(&[6, 60, 600], result.get_values());
+    /// ```
     fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
         let mut result: Self = VectorColumn::zero();
 
         for value in iter {
-            result += *value;
+            result = result + value;
         }
 
-        result
+        return result;
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Add<&VectorColumn<TR, S>> for &VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
+    TL: Add<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Normal elementwise addition of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    ///
+    /// let z = &x + &y;
+    ///
+    /// assert_eq!(&[3, 30], z.get_values());
+    /// ```
+    fn add(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
+        let values = self
+            .values
+            .iter()
+            .zip(rhs.values.iter())
+            .map(|(&a, &b)| a + b)
+            .collect_array()
+            .expect("Should not happen");
+
+        return Self::Output { values };
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Add<&VectorColumn<TR, S>> for VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
+    TL: Add<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Normal elementwise addition of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    ///
+    /// let z = x + &y;
+    ///
+    /// assert_eq!(&[3, 30], z.get_values());
+    /// ```
+    fn add(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
+        return &self + rhs;
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Add<VectorColumn<TR, S>> for &VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
+    TL: Add<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Normal elementwise addition of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    ///
+    /// let z = &x + y;
+    ///
+    /// assert_eq!(&[3, 30], z.get_values());
+    /// ```
+    fn add(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+        return self + &rhs;
     }
 }
 
 impl<TL, TR, TO, const S: usize> Add<VectorColumn<TR, S>> for VectorColumn<TL, S>
 where
-    TL: Copy,
+    TL: Copy + Debug + PartialEq,
     TL: Add<TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
 {
     type Output = VectorColumn<TO, S>;
 
@@ -224,64 +502,71 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
     ///
     /// let z = x + y;
     ///
-    /// assert_eq!(&[0, 11], z.get_values());
+    /// assert_eq!(&[3, 30], z.get_values());
     /// ```
     fn add(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S)
-            .map(|i| self.values[i] + rhs.values[i])
-            .collect::<Vec<TO>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+        return &self + &rhs;
+    }
+}
 
-        Self::Output { values }
+impl<T, const S: usize> AddAssign<&VectorColumn<T, S>> for VectorColumn<T, S>
+where
+    T: Copy + Debug + PartialEq,
+    T: Add<T, Output = T>,
+{
+    /// Normal in place elementwise addition of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut x = static_linear_algebra::VectorColumn::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::from([1, 10]);
+    ///
+    /// x += &y;
+    ///
+    /// assert_eq!(&[3, 30], x.get_values());
+    /// ```
+    fn add_assign(&mut self, rhs: &VectorColumn<T, S>) {
+        self.values
+            .iter_mut()
+            .zip(rhs.values.iter())
+            .for_each(|(a, &b)| *a = *a + b);
     }
 }
 
 impl<T, const S: usize> AddAssign<VectorColumn<T, S>> for VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Add<T, Output = T>,
 {
-    /// Normal elementwise addition of two column vectors
+    /// Normal in place elementwise addition of two column vectors
     ///
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
+    /// let mut x = static_linear_algebra::VectorColumn::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::from([1, 10]);
     ///
     /// x += y;
     ///
-    /// assert_eq!(&[0, 11], x.get_values());
+    /// assert_eq!(&[3, 30], x.get_values());
     /// ```
     fn add_assign(&mut self, rhs: VectorColumn<T, S>) {
-        let values: [T; S] = match (0..S)
-            .map(|i| self.values[i] + rhs.values[i])
-            .collect::<Vec<T>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        self.values = values;
+        *self += &rhs;
     }
 }
 
-impl<TL, TR, TO, const S: usize> Sub<VectorColumn<TR, S>> for VectorColumn<TL, S>
+impl<TL, TR, TO, const S: usize> Sub<&VectorColumn<TR, S>> for &VectorColumn<TL, S>
 where
-    TL: Copy,
+    TL: Copy + Debug + PartialEq,
     TL: Sub<TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
 {
     type Output = VectorColumn<TO, S>;
 
@@ -290,64 +575,204 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([3, 30]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
     ///
-    /// let z = x - y;
+    /// let z = &x - &y;
     ///
-    /// assert_eq!(&[0, -9], z.get_values());
+    /// assert_eq!(&[2, 20], z.get_values());
     /// ```
-    fn sub(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        let values: [TO; S] = match (0..S)
-            .map(|i| self.values[i] - rhs.values[i])
-            .collect::<Vec<TO>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+    fn sub(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
+        let values = self
+            .values
+            .iter()
+            .zip(rhs.values.iter())
+            .map(|(&a, &b)| a - b)
+            .collect_array()
+            .expect("Should not happen");
 
-        Self::Output { values }
+        return Self::Output { values };
     }
 }
 
-impl<T, const S: usize> SubAssign<VectorColumn<T, S>> for VectorColumn<T, S>
+impl<TL, TR, TO, const S: usize> Sub<&VectorColumn<TR, S>> for VectorColumn<TL, S>
 where
-    T: Copy,
-    T: Sub<T, Output = T>,
+    TL: Copy + Debug + PartialEq,
+    TL: Sub<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
 {
+    type Output = VectorColumn<TO, S>;
+
     /// Normal elementwise subtraction of two column vectors
     ///
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([3, 30]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
     ///
-    /// x -= y;
+    /// let z = x - &y;
     ///
-    /// assert_eq!(&[0, -9], x.get_values());
+    /// assert_eq!(&[2, 20], z.get_values());
     /// ```
-    fn sub_assign(&mut self, rhs: VectorColumn<T, S>) {
-        let values: [T; S] = match (0..S)
-            .map(|i| self.values[i] - rhs.values[i])
-            .collect::<Vec<T>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        self.values = values;
+    fn sub(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
+        return &self - rhs;
     }
 }
 
-impl<TL, TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for VectorColumn<TL, S>
+impl<TL, TR, TO, const S: usize> Sub<VectorColumn<TR, S>> for &VectorColumn<TL, S>
 where
-    TL: Copy,
+    TL: Copy + Debug + PartialEq,
+    TL: Sub<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Normal elementwise subtraction of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([3, 30]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    ///
+    /// let z = &x - y;
+    ///
+    /// assert_eq!(&[2, 20], z.get_values());
+    /// ```
+    fn sub(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+        return self - &rhs;
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Sub<VectorColumn<TR, S>> for VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
+    TL: Sub<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Normal elementwise subtraction of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([3, 30]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    ///
+    /// let z = x - y;
+    ///
+    /// assert_eq!(&[2, 20], z.get_values());
+    /// ```
+    fn sub(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+        return &self - &rhs;
+    }
+}
+
+impl<T, const S: usize> SubAssign<&VectorColumn<T, S>> for VectorColumn<T, S>
+where
+    T: Copy + Debug + PartialEq,
+    T: Sub<T, Output = T>,
+{
+    /// Normal in place elementwise subtraction of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut x = static_linear_algebra::VectorColumn::from([3, 30]);
+    /// let y = static_linear_algebra::VectorColumn::from([1, 10]);
+    ///
+    /// x -= &y;
+    ///
+    /// assert_eq!(&[2, 20], x.get_values());
+    /// ```
+    fn sub_assign(&mut self, rhs: &VectorColumn<T, S>) {
+        self.values
+            .iter_mut()
+            .zip(rhs.values.iter())
+            .for_each(|(a, &b)| *a = *a - b);
+    }
+}
+
+impl<T, const S: usize> SubAssign<VectorColumn<T, S>> for VectorColumn<T, S>
+where
+    T: Copy + Debug + PartialEq,
+    T: Sub<T, Output = T>,
+{
+    /// Normal in place elementwise subtraction of two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let mut x = static_linear_algebra::VectorColumn::from([3, 30]);
+    /// let y = static_linear_algebra::VectorColumn::from([1, 10]);
+    ///
+    /// x -= y;
+    ///
+    /// assert_eq!(&[2, 20], x.get_values());
+    /// ```
+    fn sub_assign(&mut self, rhs: VectorColumn<T, S>) {
+        *self -= &rhs;
+    }
+}
+
+impl<TI, TO, const S: usize> Neg for &VectorColumn<TI, S>
+where
+    TI: Copy + Debug + PartialEq,
+    TI: Neg<Output = TO>,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Elementwise negation of the column vector
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([3, 30]);
+    /// let y = -&x;
+    ///
+    /// assert_eq!(&[-3, -30], y.get_values());
+    /// ```
+    fn neg(self) -> Self::Output {
+        let values = self.values.map(|a| -a);
+        return VectorColumn { values };
+    }
+}
+
+impl<TI, TO, const S: usize> Neg for VectorColumn<TI, S>
+where
+    TI: Copy + Debug + PartialEq,
+    TI: Neg<Output = TO>,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Elementwise negation of the column vector
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([3, 30]);
+    /// let y = -x;
+    ///
+    /// assert_eq!(&[-3, -30], y.get_values());
+    /// ```
+    fn neg(self) -> Self::Output {
+        return -&self;
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Mul<&VectorColumn<TR, S>> for &VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
     TL: Mul<TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
     TO: Sum,
 {
     type Output = TO;
@@ -357,102 +782,168 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
     ///
-    /// let z = x * y;
+    /// let z = &x * &y;
     ///
-    /// assert_eq!(10, z);
+    /// assert_eq!(202, z);
     /// ```
-    fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
-        (0..S).map(|i| self.values[i] * rhs.values[i]).sum()
+    fn mul(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
+        return self
+            .values
+            .iter()
+            .zip(rhs.values.iter())
+            .map(|(&a, &b)| a * b)
+            .sum();
     }
 }
 
-impl<TL, TR, TO, const R: usize, const C: usize> Mul<VectorRow<TR, C>> for VectorColumn<TL, R>
+impl<TL, TR, TO, const S: usize> Mul<&VectorColumn<TR, S>> for VectorColumn<TL, S>
 where
-    TL: Copy,
+    TL: Copy + Debug + PartialEq,
     TL: Mul<TR, Output = TO>,
-    TR: Copy,
-    TO: Copy,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
     TO: Sum,
 {
-    type Output = Matrix<TO, R, C>;
+    type Output = TO;
 
-    /// Outer product between a column vector and a row vector
+    /// Inner product (dot product) between two column vectors
     ///
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = static_linear_algebra::VectorRow::new([10, 20]);
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    ///
+    /// let z = x * &y;
+    ///
+    /// assert_eq!(202, z);
+    /// ```
+    fn mul(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
+        return &self * rhs;
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for &VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
+    TO: Sum,
+{
+    type Output = TO;
+
+    /// Inner product (dot product) between two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    ///
+    /// let z = &x * y;
+    ///
+    /// assert_eq!(202, z);
+    /// ```
+    fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+        return self * &rhs;
+    }
+}
+
+impl<TL, TR, TO, const S: usize> Mul<VectorColumn<TR, S>> for VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TO: Copy + Debug + PartialEq,
+    TO: Sum,
+{
+    type Output = TO;
+
+    /// Inner product (dot product) between two column vectors
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([2, 20]);
+    /// let y = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
     ///
     /// let z = x * y;
     ///
-    /// assert_eq!(&[[0, 0], [10, 20]], z.get_values());
+    /// assert_eq!(202, z);
     /// ```
-    fn mul(self, rhs: VectorRow<TR, C>) -> Self::Output {
-        let values: [[TO; C]; R] = match (0..R)
-            .map(|r| {
-                match (0..C)
-                    .map(|c| self.values[r] * rhs.values[c])
-                    .collect::<Vec<TO>>()
-                    .try_into()
-                {
-                    Ok(result) => result,
-                    Err(_) => panic!("Should not happen"),
-                }
-            })
-            .collect::<Vec<[TO; C]>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+    fn mul(self, rhs: VectorColumn<TR, S>) -> Self::Output {
+        return &self * &rhs;
+    }
+}
 
-        Matrix { values }
+impl<TL, TR, TO, const S: usize> Mul<TR> for &VectorColumn<TL, S>
+where
+    TL: Copy + Debug + PartialEq,
+    TL: Mul<TR, Output = TO>,
+    TR: Copy + Debug + PartialEq,
+    TR: Num,
+    TO: Copy + Debug + PartialEq,
+{
+    type Output = VectorColumn<TO, S>;
+
+    /// Scalar multiplication from the right
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    /// let y = 2;
+    ///
+    /// let z = &x * y;
+    ///
+    /// assert_eq!(&[2, 20], z.get_values());
+    /// ```
+    fn mul(self, rhs: TR) -> Self::Output {
+        let values = self
+            .values
+            .iter()
+            .map(|&v| v * rhs)
+            .collect_array()
+            .expect("Should not happen");
+
+        return Self::Output { values };
     }
 }
 
 impl<TL, TR, TO, const S: usize> Mul<TR> for VectorColumn<TL, S>
 where
-    TL: Copy,
+    TL: Copy + Debug + PartialEq,
     TL: Mul<TR, Output = TO>,
-    TR: Copy,
+    TR: Copy + Debug + PartialEq,
     TR: Num,
-    TO: Copy,
+    TO: Copy + Debug + PartialEq,
 {
     type Output = VectorColumn<TO, S>;
 
-    /// Scalar multiplication from the right, this is preferable from lhs scalar multiplication
+    /// Scalar multiplication from the right
     ///
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = 10;
+    /// let x = static_linear_algebra::VectorColumn::<i32, _>::from([1, 10]);
+    /// let y = 2;
     ///
     /// let z = x * y;
     ///
-    /// assert_eq!(&[0, 10], z.get_values());
+    /// assert_eq!(&[2, 20], z.get_values());
     /// ```
     fn mul(self, rhs: TR) -> Self::Output {
-        let values: [TO; S] = match (0..S)
-            .map(|i| self.values[i] * rhs)
-            .collect::<Vec<TO>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        Self::Output { values }
+        return &self * rhs;
     }
 }
 
 impl<T, const S: usize> MulAssign<T> for VectorColumn<T, S>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
     T: Mul<T, Output = T>,
     T: Num,
 {
@@ -461,24 +952,15 @@ where
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::VectorColumn::new([0, 1]);
-    /// let y = 10;
+    /// let mut x = static_linear_algebra::VectorColumn::from([1, 10]);
+    /// let y = 2;
     ///
     /// x *= y;
     ///
-    /// assert_eq!(&[0, 10], x.get_values());
+    /// assert_eq!(&[2, 20], x.get_values());
     /// ```
     fn mul_assign(&mut self, rhs: T) {
-        let values: [T; S] = match (0..S)
-            .map(|i| self.values[i] * rhs)
-            .collect::<Vec<T>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
-
-        self.values = values;
+        self.values.iter_mut().for_each(|v| *v = *v * rhs);
     }
 }
 
@@ -487,26 +969,33 @@ mod tests {
     use super::*;
 
     #[test]
-    fn new() {
-        let result = VectorColumn::new([0, 1, 2, 3]);
+    fn from_array() {
+        let result = VectorColumn::from([0, 1, 2, 3]);
         assert_eq!([0, 1, 2, 3], result.values);
     }
 
     #[test]
     fn from_value() {
-        let result: VectorColumn<f64, 5> = VectorColumn::from_value(5.6);
+        let result: VectorColumn<f64, 5> = VectorColumn::from(5.6);
         assert_eq!([5.6, 5.6, 5.6, 5.6, 5.6], result.values);
     }
 
     #[test]
+    fn into_array() {
+        let input = VectorColumn::from([0, 1, 2, 3]);
+        let result: [i32; _] = input.into();
+        assert_eq!([0, 1, 2, 3], result);
+    }
+
+    #[test]
     fn get_values() {
-        let result = VectorColumn::new([0, 1, 2]);
+        let result = VectorColumn::from([0, 1, 2]);
         assert_eq!([0, 1, 2], *result.get_values());
     }
 
     #[test]
     fn get_values_mut() {
-        let mut result = VectorColumn::new([0, 1, 2]);
+        let mut result = VectorColumn::from([0, 1, 2]);
         let data = result.get_values_mut();
         data[1] = 5;
         assert_eq!([0, 5, 2], result.values);
@@ -514,13 +1003,13 @@ mod tests {
 
     #[test]
     fn index() {
-        let result = VectorColumn::new([0, 1, 2]);
+        let result = VectorColumn::from([0, 1, 2]);
         assert_eq!(1, result[1]);
     }
 
     #[test]
     fn index_mut() {
-        let mut result = VectorColumn::new([0, 1, 2]);
+        let mut result = VectorColumn::from([0, 1, 2]);
         result[1] = 5;
         assert_eq!([0, 5, 2], result.values);
     }
@@ -533,99 +1022,128 @@ mod tests {
 
     #[test]
     fn is_zero() {
-        let result1 = VectorColumn::new([0, 0, 0]);
-        let result2 = VectorColumn::new([0, 1, 0]);
+        let result1 = VectorColumn::<i32, _>::from([0, 0, 0]);
+        let result2 = VectorColumn::<i32, _>::from([0, 1, 0]);
         assert_eq!(true, result1.is_zero());
         assert_eq!(false, result2.is_zero());
     }
 
     #[test]
     fn sum() {
-        let list: [VectorColumn<i32, 3>; 3] = [
-            VectorColumn::new([0, 1, 2]),
-            VectorColumn::new([0, 10, 20]),
-            VectorColumn::new([0, 100, 200]),
+        let list = [
+            VectorColumn::from([1, 10, 100]),
+            VectorColumn::from([2, 20, 200]),
+            VectorColumn::from([3, 30, 300]),
         ];
-        let result: VectorColumn<i32, 3> = list.into_iter().sum();
-        assert_eq!([0, 111, 222], result.values);
+        let result: VectorColumn<i32, _> = list.into_iter().sum();
+        assert_eq!([6, 60, 600], result.values);
     }
 
     #[test]
     fn sum_ref() {
-        let list: [VectorColumn<i32, 3>; 3] = [
-            VectorColumn::new([0, 1, 2]),
-            VectorColumn::new([0, 10, 20]),
-            VectorColumn::new([0, 100, 200]),
+        let list = [
+            VectorColumn::from([1, 10, 100]),
+            VectorColumn::from([2, 20, 200]),
+            VectorColumn::from([3, 30, 300]),
         ];
-        let result: VectorColumn<i32, 3> = list.iter().sum();
-        assert_eq!([0, 111, 222], result.values);
+        let result: VectorColumn<i32, _> = list.iter().sum();
+        assert_eq!([6, 60, 600], result.values);
     }
 
     #[test]
     fn add() {
-        let vector1 = VectorColumn::new([0, 1, 2]);
-        let vector2 = VectorColumn::new([0, 10, 20]);
+        let vector1 = VectorColumn::<i32, _>::from([2, 20]);
+        let vector2 = VectorColumn::<i32, _>::from([1, 10]);
         let result = vector1 + vector2;
-        assert_eq!([0, 11, 22], result.values);
+        assert_eq!([3, 30], result.values);
     }
 
     #[test]
     fn add_assign() {
-        let mut vector1 = VectorColumn::new([0, 1, 2]);
-        let vector2 = VectorColumn::new([0, 10, 20]);
+        let mut vector1 = VectorColumn::<i32, _>::from([2, 20]);
+        let vector2 = VectorColumn::<i32, _>::from([1, 10]);
         vector1 += vector2;
-        assert_eq!([0, 11, 22], vector1.values);
+        assert_eq!([3, 30], vector1.values);
     }
 
     #[test]
     fn sub() {
-        let vector1 = VectorColumn::new([0, 1, 2]);
-        let vector2 = VectorColumn::new([0, 10, 20]);
+        let vector1 = VectorColumn::<i32, _>::from([3, 30]);
+        let vector2 = VectorColumn::<i32, _>::from([1, 10]);
         let result = vector1 - vector2;
-        assert_eq!([0, -9, -18], result.values);
+        assert_eq!([2, 20], result.values);
     }
 
     #[test]
     fn sub_assign() {
-        let mut vector1 = VectorColumn::new([0, 1, 2]);
-        let vector2 = VectorColumn::new([0, 10, 20]);
+        let mut vector1 = VectorColumn::<i32, _>::from([3, 30]);
+        let vector2 = VectorColumn::<i32, _>::from([1, 10]);
         vector1 -= vector2;
-        assert_eq!([0, -9, -18], vector1.values);
+        assert_eq!([2, 20], vector1.values);
+    }
+
+    #[test]
+    fn neg() {
+        let vector = VectorColumn::<i32, _>::from([3, 30]);
+        let result = -vector;
+        assert_eq!([-3, -30], result.values);
     }
 
     #[test]
     fn dot_product() {
-        let vector1 = VectorColumn::new([0, 1, 2]);
-        let vector2 = VectorColumn::new([3, 4, 5]);
+        let vector1 = VectorColumn::<i32, _>::from([2, 20]);
+        let vector2 = VectorColumn::<i32, _>::from([3, 30]);
         let result = vector1 * vector2;
-        assert_eq!(14, result);
-    }
-
-    #[test]
-    fn out_product() {
-        let vector_row = VectorRow::new([0, 1]);
-        let vector_column = VectorColumn::new([2, 3, 4]);
-        let result = vector_column * vector_row;
-        assert_eq!([[0, 2], [0, 3], [0, 4]], result.values);
+        assert_eq!(606, result);
     }
 
     #[test]
     fn scalar_mul() {
-        let vector = VectorColumn::new([0, 1, 2]);
+        let vector = VectorColumn::<i32, _>::from([1, 10]);
         let result = vector * 5;
-        assert_eq!([0, 5, 10], result.values);
+        assert_eq!([5, 50], result.values);
     }
 
     #[test]
     fn scalar_mul_assign() {
-        let mut vector = VectorColumn::new([0, 1, 2]);
+        let mut vector = VectorColumn::from([1, 10]);
         vector *= 5;
-        assert_eq!([0, 5, 10], vector.values);
+        assert_eq!([5, 50], vector.values);
+    }
+
+    #[test]
+    fn elementwise() {
+        let vector = VectorColumn::from([1, 2, 3]);
+        let result = vector.elementwise(|x| x * 2);
+        assert_eq!([2, 4, 6], result.values);
+    }
+
+    #[test]
+    fn elementwise_mut() {
+        let mut vector = VectorColumn::from([1, 2, 3]);
+        vector.elementwise_mut(|x| x * 2);
+        assert_eq!([2, 4, 6], vector.values);
+    }
+
+    #[test]
+    fn elementwise_operation() {
+        let vector1 = VectorColumn::from([3, 30, 300]);
+        let vector2 = VectorColumn::from([2, 20, 200]);
+        let result = vector1.elementwise_operation(&vector2, |x, y| x * y);
+        assert_eq!([6, 600, 60000], result.values);
+    }
+
+    #[test]
+    fn elementwise_operation_mut() {
+        let mut vector1 = VectorColumn::from([3, 30, 300]);
+        let vector2 = VectorColumn::from([2, 20, 200]);
+        vector1.elementwise_operation_mut(&vector2, |x, y| x * y);
+        assert_eq!([6, 600, 60000], vector1.values);
     }
 
     #[test]
     fn transpose() {
-        let vector = VectorColumn::new([0, 1, 2]);
+        let vector = VectorColumn::from([0, 1, 2]);
         let result = vector.transpose();
         assert_eq!([0, 1, 2], result.values);
     }
@@ -633,7 +1151,7 @@ mod tests {
     #[test]
     fn hermitian_conjugate() {
         let vector =
-            VectorColumn::new([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
+            VectorColumn::from([Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)]);
         let result = vector.hermitian_conjugate();
         assert_eq!(
             [Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, -1)],

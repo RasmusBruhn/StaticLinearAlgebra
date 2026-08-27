@@ -1,15 +1,17 @@
 //! Implementation of and all methods on matrices
 
-use super::vector_column::VectorColumn;
-use core::ops::Neg;
+use super::{VectorColumn, VectorRow};
+use itertools::Itertools;
 use num::{
     traits::{Num, One, Zero},
     Complex,
 };
 use std::{
     array,
-    iter::{Product, Sum},
-    ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign, Sub, SubAssign},
+    convert::{From, Into},
+    fmt::Debug,
+    iter::{repeat_n, Product, Sum},
+    ops::{Add, AddAssign, Div, Index, IndexMut, Mul, MulAssign, Neg, Sub, SubAssign},
 };
 
 /// A static matrix type
@@ -22,61 +24,27 @@ use std::{
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub struct Matrix<T, const R: usize, const C: usize>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
 {
     pub(crate) values: [[T; C]; R],
 }
 
 impl<T, const R: usize, const C: usize> Matrix<T, R, C>
 where
-    T: Copy,
+    T: Copy + Debug + PartialEq,
 {
-    /// Initializes a new matrix with the given values
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1, 2], [3, 4, 5]]);
-    ///
-    /// assert_eq!(&[[0, 1, 2], [3, 4, 5]], x.get_values());
-    /// ```
-    pub fn new(values: [[T; C]; R]) -> Self {
-        assert_ne!(C, 0);
-        assert_ne!(R, 0);
-
-        Self { values }
-    }
-
-    /// Initializes a new matrix filled with a single value
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let x = static_linear_algebra::Matrix::<f32, 2, 2>::from_value(1.);
-    ///
-    /// assert_eq!(&[[1., 1.], [1., 1.]], x.get_values());
-    /// ```
-    pub fn from_value(value: T) -> Self {
-        assert_ne!(C, 0);
-        assert_ne!(R, 0);
-
-        Self {
-            values: [[value; C]; R],
-        }
-    }
-
     /// Retrieves a reference to the data of the matrix
     ///
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
     /// let data = x.get_values();
     ///
     /// assert_eq!(&[[0, 1], [2, 3]], data);
     /// ```
     pub fn get_values(&self) -> &[[T; C]; R] {
-        &self.values
+        return &self.values;
     }
 
     /// Retrieves a mutable reference to the data of the matrix
@@ -84,14 +52,14 @@ where
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
+    /// let mut x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
     /// let data = x.get_values_mut();
     /// data[0][1] = 5;
     ///
     /// assert_eq!(&[[0, 5], [2, 3]], x.get_values());
     /// ```
     pub fn get_values_mut(&mut self) -> &mut [[T; C]; R] {
-        &mut self.values
+        return &mut self.values;
     }
 
     /// Transposes the matrix, switching row and columns
@@ -99,87 +67,42 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1, 2], [3, 4, 5]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1, 2], [3, 4, 5]]);
     /// let y = x.transpose();
     ///
     /// assert_eq!(&[[0, 3], [1, 4], [2, 5]], y.get_values());
     /// ```
     pub fn transpose(&self) -> Matrix<T, C, R> {
-        let values: [[T; R]; C] = match (0..C)
+        let values: [[T; R]; C] = (0..C)
             .map(|r| {
-                match (0..R)
+                (0..R)
                     .map(|c| self.values[c][r])
-                    .collect::<Vec<T>>()
-                    .try_into()
-                {
-                    Ok(result) => result,
-                    Err(_) => panic!("Should not happen"),
-                }
+                    .collect_array()
+                    .expect("Should not happen")
             })
-            .collect::<Vec<[T; R]>>()
-            .try_into()
-        {
-            Ok(result) => result,
-            Err(_) => panic!("Should not happen"),
-        };
+            .collect_array()
+            .expect("Should not happen");
 
-        Matrix { values }
+        return Matrix { values };
     }
 }
 
 impl<T, const S: usize> Matrix<T, S, S>
 where
-    T: Copy,
-    T: Zero,
-{
-    /// Initializes a diagonal matrix where the diagonal contains the values given
-    /// and everything else is 0
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let x = static_linear_algebra::Matrix::from_diag(&[2, 3]);
-    ///
-    /// assert_eq!(&[[2, 0], [0, 3]], x.get_values());
-    /// ```
-    pub fn from_diag(values: &[T; S]) -> Self {
-        assert_ne!(S, 0);
-
-        let mut use_values = [[T::zero(); S]; S];
-
-        for (n, value) in values.iter().enumerate() {
-            use_values[n][n] = *value;
-        }
-
-        Self { values: use_values }
-    }
-}
-
-impl<T, const S: usize> Matrix<T, S, S>
-where
-    T: Copy,
-    T: Zero,
-    T: One,
+    T: Copy + Debug + PartialEq,
+    T: Zero + One,
 {
     /// Initializes a diagonal matrix where the diagonal contains ones
     ///
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::<i32, 3, 3>::identity();
+    /// let x = static_linear_algebra::Matrix::identity();
     ///
-    /// assert_eq!(&[[1, 0, 0], [0, 1, 0], [0, 0, 1]], x.get_values());
+    /// assert_eq!(&[[1, 0], [0, 1]], x.get_values());
     /// ```
     pub fn identity() -> Self {
-        assert_ne!(S, 0);
-
-        let mut use_values = [[T::zero(); S]; S];
-
-        for n in 0..S {
-            use_values[n][n] = T::one();
-        }
-
-        Self { values: use_values }
+        return Self::from(T::one());
     }
 }
 
@@ -197,7 +120,7 @@ where
     /// ```
     /// use num::Complex;
     ///
-    /// let x = static_linear_algebra::Matrix::new([[Complex::new(1, 0), Complex::new(0, 2)], [Complex::new(0, 3), Complex::new(0, 4)]]);
+    /// let x = static_linear_algebra::Matrix::from([[Complex::new(1, 0), Complex::new(0, 2)], [Complex::new(0, 3), Complex::new(0, 4)]]);
     /// let y = x.hermitian_conjugate();
     ///
     /// assert_eq!(&[[Complex::new(1, 0), Complex::new(0, -3)], [Complex::new(0, -2), Complex::new(0, -4)]], y.get_values())
@@ -235,13 +158,13 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [1, 2]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [1, 2]]);
     ///
     /// assert_eq!(true, x.is_symmetric());
     /// ```
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 1]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 1]]);
     ///
     /// assert_eq!(false, x.is_symmetric());
     /// ```
@@ -263,7 +186,7 @@ where
     /// ```
     /// use num::Complex;
     ///
-    /// let x = static_linear_algebra::Matrix::new([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
+    /// let x = static_linear_algebra::Matrix::from([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, -1), Complex::new(2, 0)]]);
     ///
     /// assert_eq!(true, x.is_hermitian());
     /// ```
@@ -271,7 +194,7 @@ where
     /// ```
     /// use num::Complex;
     ///
-    /// let x = static_linear_algebra::Matrix::new([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
+    /// let x = static_linear_algebra::Matrix::from([[Complex::new(0, 0), Complex::new(0, 1)], [Complex::new(0, 1), Complex::new(2, 0)]]);
     ///
     /// assert_eq!(false, x.is_hermitian());
     /// ```
@@ -294,7 +217,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[1.0, 2.0], [3.0, 4.0]]);
+    /// let x = static_linear_algebra::Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
     ///
     /// assert_eq!(x.determinant(), -2.0)
     /// ```
@@ -425,7 +348,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[1.0, 2.0], [3.0, 4.0]]);
+    /// let x = static_linear_algebra::Matrix::from([[1.0, 2.0], [3.0, 4.0]]);
     ///
     /// assert_eq!(x.inverse().unwrap().get_values(), &[[-2.0, 1.0], [1.5, -0.5]])
     /// ```
@@ -509,6 +432,120 @@ where
             }
         })
         .sum::<T>()
+}
+
+impl<T, const R: usize, const C: usize> From<[[T; C]; R]> for Matrix<T, R, C>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Constructs a new matrix with the given values
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::Matrix::from([[0, 1, 2], [3, 4, 5]]);
+    ///
+    /// assert_eq!(&[[0, 1, 2], [3, 4, 5]], x.get_values());
+    /// ```
+    fn from(value: [[T; C]; R]) -> Self {
+        return Self { values: value };
+    }
+}
+
+impl<T, const S: usize> From<[T; S]> for Matrix<T, S, S>
+where
+    T: Copy + Debug + PartialEq,
+    T: Zero,
+{
+    /// Constructs a new matrix from its diagonal
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::Matrix::from([1, 2]);
+    ///
+    /// assert_eq!(&[[1, 0], [0, 2]], x.get_values());
+    /// ```
+    fn from(value: [T; S]) -> Self {
+        let values = value
+            .iter()
+            .enumerate()
+            .map(|(i, x)| {
+                let mut row = [T::zero(); S];
+                row[i] = *x;
+                return row;
+            })
+            .collect_array()
+            .expect("Should not happen");
+
+        return Self { values };
+    }
+}
+
+impl<T, const S: usize> From<T> for Matrix<T, S, S>
+where
+    T: Copy + Debug + PartialEq,
+    T: Zero,
+{
+    /// Constructs a new matrix with its diagonal equal to the input value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let x = static_linear_algebra::Matrix::from(2);
+    ///
+    /// assert_eq!(&[[2, 0], [0, 2]], x.get_values());
+    /// ```
+    fn from(value: T) -> Self {
+        return Self::from([value; S]);
+    }
+}
+
+impl<T, const S: usize> From<VectorColumn<T, S>> for Matrix<T, S, 1>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Constructs a new matrix from a column vector
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let vector = static_linear_algebra::VectorColumn::from([1, 2]);
+    /// let x = static_linear_algebra::Matrix::from(vector);
+    ///
+    /// assert_eq!(&[[1], [2]], x.get_values());
+    /// ```
+    fn from(value: VectorColumn<T, S>) -> Self {
+        let values = value
+            .get_values()
+            .iter()
+            .map(|&x| [x])
+            .collect_array()
+            .expect("Should not happen");
+
+        return Self { values };
+    }
+}
+
+impl<T, const S: usize> From<VectorRow<T, S>> for Matrix<T, 1, S>
+where
+    T: Copy + Debug + PartialEq,
+{
+    /// Constructs a new matrix from a row vector
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let vector = static_linear_algebra::VectorColumn::from([1, 2]);
+    /// let x = static_linear_algebra::Matrix::from(vector);
+    ///
+    /// assert_eq!(&[[1], [2]], x.get_values());
+    /// ```
+    fn from(value: VectorRow<T, S>) -> Self {
+        let values = [*value.get_values()];
+
+        return Self { values };
+    }
 }
 
 impl<T, const R: usize, const C: usize> Index<usize> for Matrix<T, R, C>
@@ -649,8 +686,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
-    /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::from([[0, 10], [20, 30]]);
     ///
     /// let z = x + y;
     ///
@@ -694,8 +731,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
-    /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
+    /// let mut x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::from([[0, 10], [20, 30]]);
     ///
     /// x += y;
     ///
@@ -721,8 +758,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
-    /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::from([[0, 10], [20, 30]]);
     ///
     /// let z = x - y;
     ///
@@ -766,8 +803,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
-    /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
+    /// let mut x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::from([[0, 10], [20, 30]]);
     ///
     /// x -= y;
     ///
@@ -795,8 +832,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
-    /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::from([[0, 10], [20, 30]]);
     ///
     /// let z = x * y;
     ///
@@ -840,7 +877,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
     /// let y = static_linear_algebra::VectorColumn::new([0, 10]);
     ///
     /// let z = x * y;
@@ -876,7 +913,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// let x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
+    /// let x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
     /// let y = 10;
     ///
     /// let z = x * y;
@@ -920,8 +957,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
-    /// let y = static_linear_algebra::Matrix::new([[0, 10], [20, 30]]);
+    /// let mut x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
+    /// let y = static_linear_algebra::Matrix::from([[0, 10], [20, 30]]);
     ///
     /// x *= y;
     ///
@@ -944,7 +981,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// let mut x = static_linear_algebra::Matrix::new([[0, 1], [2, 3]]);
+    /// let mut x = static_linear_algebra::Matrix::from([[0, 1], [2, 3]]);
     /// let y = 10;
     ///
     /// x *= y;
@@ -975,7 +1012,7 @@ mod tests {
 
     #[test]
     fn new() {
-        let result = Matrix::new([[0, 1], [2, 3], [4, 5]]);
+        let result = Matrix::from([[0, 1], [2, 3], [4, 5]]);
         assert_eq!([[0, 1], [2, 3], [4, 5]], result.values);
     }
 
@@ -999,13 +1036,13 @@ mod tests {
 
     #[test]
     fn get_values() {
-        let result = Matrix::new([[0, 1, 2], [3, 4, 5]]);
+        let result = Matrix::from([[0, 1, 2], [3, 4, 5]]);
         assert_eq!(&[[0, 1, 2], [3, 4, 5]], result.get_values());
     }
 
     #[test]
     fn get_values_mut() {
-        let mut result = Matrix::new([[0, 1, 2], [3, 4, 5]]);
+        let mut result = Matrix::from([[0, 1, 2], [3, 4, 5]]);
         let data = result.get_values_mut();
         data[0][1] = 10;
         assert_eq!([[0, 10, 2], [3, 4, 5]], result.values);
@@ -1013,14 +1050,14 @@ mod tests {
 
     #[test]
     fn matrix_of_matrix() {
-        let result = Matrix::new([
-            [Matrix::new([[1, 0], [0, 1]])],
-            [Matrix::new([[0, 1], [-1, 0]])],
+        let result = Matrix::from([
+            [Matrix::from([[1, 0], [0, 1]])],
+            [Matrix::from([[0, 1], [-1, 0]])],
         ]);
         assert_eq!(
             [
-                [Matrix::new([[1, 0], [0, 1]])],
-                [Matrix::new([[0, 1], [-1, 0]])]
+                [Matrix::from([[1, 0], [0, 1]])],
+                [Matrix::from([[0, 1], [-1, 0]])]
             ],
             result.values
         );
@@ -1028,13 +1065,13 @@ mod tests {
 
     #[test]
     fn index_get() {
-        let result = Matrix::new([[0, 1, 2], [3, 4, 5]]);
+        let result = Matrix::from([[0, 1, 2], [3, 4, 5]]);
         assert_eq!(2, result[0][2]);
     }
 
     #[test]
     fn index_set() {
-        let mut result = Matrix::new([[0, 1, 2], [3, 4, 5]]);
+        let mut result = Matrix::from([[0, 1, 2], [3, 4, 5]]);
         result[0][2] = 10;
         assert_eq!(10, result[0][2]);
     }
@@ -1061,9 +1098,9 @@ mod tests {
     #[test]
     fn sum() {
         let list: [Matrix<i32, 2, 2>; 3] = [
-            Matrix::new([[0, 1], [2, 3]]),
-            Matrix::new([[0, 10], [20, 30]]),
-            Matrix::new([[0, 100], [200, 300]]),
+            Matrix::from([[0, 1], [2, 3]]),
+            Matrix::from([[0, 10], [20, 30]]),
+            Matrix::from([[0, 100], [200, 300]]),
         ];
         let result: Matrix<i32, 2, 2> = list.into_iter().sum();
         assert_eq!([[0, 111], [222, 333]], result.values);
@@ -1072,9 +1109,9 @@ mod tests {
     #[test]
     fn sum_ref() {
         let list: [Matrix<i32, 2, 2>; 3] = [
-            Matrix::new([[0, 1], [2, 3]]),
-            Matrix::new([[0, 10], [20, 30]]),
-            Matrix::new([[0, 100], [200, 300]]),
+            Matrix::from([[0, 1], [2, 3]]),
+            Matrix::from([[0, 10], [20, 30]]),
+            Matrix::from([[0, 100], [200, 300]]),
         ];
         let result: Matrix<i32, 2, 2> = list.into_iter().sum();
         assert_eq!([[0, 111], [222, 333]], result.values);
@@ -1083,9 +1120,9 @@ mod tests {
     #[test]
     fn product() {
         let list: [Matrix<i32, 2, 2>; 3] = [
-            Matrix::new([[0, 1], [2, 3]]),
-            Matrix::new([[4, 5], [6, 7]]),
-            Matrix::new([[8, 9], [10, 11]]),
+            Matrix::from([[0, 1], [2, 3]]),
+            Matrix::from([[4, 5], [6, 7]]),
+            Matrix::from([[8, 9], [10, 11]]),
         ];
         let result: Matrix<i32, 2, 2> = list.into_iter().product();
         assert_eq!([[118, 131], [518, 575]], result.values);
@@ -1094,9 +1131,9 @@ mod tests {
     #[test]
     fn product_ref() {
         let list: [Matrix<i32, 2, 2>; 3] = [
-            Matrix::new([[0, 1], [2, 3]]),
-            Matrix::new([[4, 5], [6, 7]]),
-            Matrix::new([[8, 9], [10, 11]]),
+            Matrix::from([[0, 1], [2, 3]]),
+            Matrix::from([[4, 5], [6, 7]]),
+            Matrix::from([[8, 9], [10, 11]]),
         ];
         let result: Matrix<i32, 2, 2> = list.iter().product();
         assert_eq!([[118, 131], [518, 575]], result.values);
@@ -1104,55 +1141,55 @@ mod tests {
 
     #[test]
     fn add() {
-        let a = Matrix::new([[0, 1], [2, 3]]);
-        let b = Matrix::new([[0, 10], [20, 30]]);
+        let a = Matrix::from([[0, 1], [2, 3]]);
+        let b = Matrix::from([[0, 10], [20, 30]]);
         let c = a + b;
         assert_eq!([[0, 11], [22, 33]], c.values);
     }
 
     #[test]
     fn add_assign() {
-        let mut a = Matrix::new([[0, 1], [2, 3]]);
-        let b = Matrix::new([[0, 10], [20, 30]]);
+        let mut a = Matrix::from([[0, 1], [2, 3]]);
+        let b = Matrix::from([[0, 10], [20, 30]]);
         a += b;
         assert_eq!([[0, 11], [22, 33]], a.values);
     }
 
     #[test]
     fn sub() {
-        let a = Matrix::new([[0, 1], [2, 3]]);
-        let b = Matrix::new([[0, 10], [20, 30]]);
+        let a = Matrix::from([[0, 1], [2, 3]]);
+        let b = Matrix::from([[0, 10], [20, 30]]);
         let c = a - b;
         assert_eq!([[0, -9], [-18, -27]], c.values);
     }
 
     #[test]
     fn sub_assign() {
-        let mut a = Matrix::new([[0, 1], [2, 3]]);
-        let b = Matrix::new([[0, 10], [20, 30]]);
+        let mut a = Matrix::from([[0, 1], [2, 3]]);
+        let b = Matrix::from([[0, 10], [20, 30]]);
         a -= b;
         assert_eq!([[0, -9], [-18, -27]], a.values);
     }
 
     #[test]
     fn mul() {
-        let matrix1 = Matrix::new([[0, 1, 2, 3], [4, 5, 6, 7]]);
-        let matrix2 = Matrix::new([[0, 10, 20], [30, 40, 50], [60, 70, 80], [90, 100, 110]]);
+        let matrix1 = Matrix::from([[0, 1, 2, 3], [4, 5, 6, 7]]);
+        let matrix2 = Matrix::from([[0, 10, 20], [30, 40, 50], [60, 70, 80], [90, 100, 110]]);
         let result = matrix1 * matrix2;
         assert_eq!([[420, 480, 540], [1140, 1360, 1580]], result.values);
     }
 
     #[test]
     fn mul_assign() {
-        let mut matrix1 = Matrix::new([[0, 1], [2, 3]]);
-        let matrix2 = Matrix::new([[0, 10], [20, 30]]);
+        let mut matrix1 = Matrix::from([[0, 1], [2, 3]]);
+        let matrix2 = Matrix::from([[0, 10], [20, 30]]);
         matrix1 *= matrix2;
         assert_eq!([[20, 30], [60, 110]], matrix1.values);
     }
 
     #[test]
     fn mul_vector() {
-        let matrix = Matrix::new([[0, 1, 2], [3, 4, 5]]);
+        let matrix = Matrix::from([[0, 1, 2], [3, 4, 5]]);
         let vector = VectorColumn::new([0, 1, 2]);
         let result = matrix * vector;
         assert_eq!([5, 14], result.values);
@@ -1160,28 +1197,28 @@ mod tests {
 
     #[test]
     fn scalar_mul() {
-        let matrix = Matrix::new([[0, 1, 2]]);
+        let matrix = Matrix::from([[0, 1, 2]]);
         let result = matrix * 4;
         assert_eq!([[0, 4, 8]], result.values);
     }
 
     #[test]
     fn scalar_mul_assign() {
-        let mut matrix = Matrix::new([[0, 1, 2]]);
+        let mut matrix = Matrix::from([[0, 1, 2]]);
         matrix *= 4;
         assert_eq!([[0, 4, 8]], matrix.values);
     }
 
     #[test]
     fn transpose() {
-        let matrix = Matrix::new([[0, 1, 2], [3, 4, 5]]);
+        let matrix = Matrix::from([[0, 1, 2], [3, 4, 5]]);
         let result = matrix.transpose();
         assert_eq!([[0, 3], [1, 4], [2, 5]], result.values);
     }
 
     #[test]
     fn hermitian_conjugate() {
-        let matrix = Matrix::new([
+        let matrix = Matrix::from([
             [Complex::new(0, 0), Complex::new(1, 0), Complex::new(0, 1)],
             [Complex::new(1, 1), Complex::new(-1, 0), Complex::new(0, -1)],
         ]);
@@ -1198,11 +1235,11 @@ mod tests {
 
     #[test]
     fn is_hermitian() {
-        let matrix1 = Matrix::new([
+        let matrix1 = Matrix::from([
             [Complex::new(1, 0), Complex::new(0, 1)],
             [Complex::new(0, -1), Complex::new(0, 0)],
         ]);
-        let matrix2 = Matrix::new([
+        let matrix2 = Matrix::from([
             [Complex::new(1, 0), Complex::new(0, 1)],
             [Complex::new(0, -1), Complex::new(0, 1)],
         ]);
@@ -1212,26 +1249,26 @@ mod tests {
 
     #[test]
     fn is_symmetric() {
-        let matrix1 = Matrix::new([[0, 1], [1, 2]]);
-        let matrix2 = Matrix::new([[0, 1], [2, 1]]);
+        let matrix1 = Matrix::from([[0, 1], [1, 2]]);
+        let matrix2 = Matrix::from([[0, 1], [2, 1]]);
         assert_eq!(true, matrix1.is_symmetric());
         assert_eq!(false, matrix2.is_symmetric());
     }
 
     #[test]
     fn determinant() {
-        let matrix1 = Matrix::new([[5]]);
-        let matrix2 = Matrix::new([[4, 5], [7, 4]]);
-        let matrix3 = Matrix::new([[3, 9, 4], [6, 3, 6], [1, 6, 1]]);
-        let matrix4 = Matrix::new([[3, 5, 8, 3], [8, 8, 4, 4], [9, 3, 1, 6], [7, 3, 8, 6]]);
-        let matrix5 = Matrix::new([
+        let matrix1 = Matrix::from([[5]]);
+        let matrix2 = Matrix::from([[4, 5], [7, 4]]);
+        let matrix3 = Matrix::from([[3, 9, 4], [6, 3, 6], [1, 6, 1]]);
+        let matrix4 = Matrix::from([[3, 5, 8, 3], [8, 8, 4, 4], [9, 3, 1, 6], [7, 3, 8, 6]]);
+        let matrix5 = Matrix::from([
             [9, 2, 7, 5, 6],
             [0, 0, 9, 3, 6],
             [0, 9, 8, 7, 8],
             [3, 9, 1, 5, 9],
             [1, 2, 2, 2, 7],
         ]);
-        let matrix6 = Matrix::new([
+        let matrix6 = Matrix::from([
             [9, 0, 8, 0, 1, 0],
             [5, 2, 3, 1, 2, 3],
             [4, 1, 1, 1, 6, 3],
@@ -1249,23 +1286,23 @@ mod tests {
 
     #[test]
     fn inverse() {
-        let matrix1 = Matrix::new([[5.0]]);
-        let matrix2 = Matrix::new([[4.0, 5.0], [7.0, 4.0]]);
-        let matrix3 = Matrix::new([[3.0, 9.0, 4.0], [6.0, 3.0, 6.0], [1.0, 6.0, 1.0]]);
-        let matrix4 = Matrix::new([
+        let matrix1 = Matrix::from([[5.0]]);
+        let matrix2 = Matrix::from([[4.0, 5.0], [7.0, 4.0]]);
+        let matrix3 = Matrix::from([[3.0, 9.0, 4.0], [6.0, 3.0, 6.0], [1.0, 6.0, 1.0]]);
+        let matrix4 = Matrix::from([
             [3.0, 5.0, 8.0, 3.0],
             [8.0, 8.0, 4.0, 4.0],
             [9.0, 3.0, 1.0, 6.0],
             [7.0, 3.0, 8.0, 6.0],
         ]);
-        let matrix5 = Matrix::new([
+        let matrix5 = Matrix::from([
             [9.0, 2.0, 7.0, 5.0, 6.0],
             [0.0, 0.0, 9.0, 3.0, 6.0],
             [0.0, 9.0, 8.0, 7.0, 8.0],
             [3.0, 9.0, 1.0, 5.0, 9.0],
             [1.0, 2.0, 2.0, 2.0, 7.0],
         ]);
-        let matrix6 = Matrix::new([
+        let matrix6 = Matrix::from([
             [9.0, 0.0, 8.0, 0.0, 1.0, 0.0],
             [5.0, 2.0, 3.0, 1.0, 2.0, 3.0],
             [4.0, 1.0, 1.0, 1.0, 6.0, 3.0],
@@ -1326,7 +1363,7 @@ mod tests {
             1e-5
         ));
 
-        let matrix_singular = Matrix::new([[2.0, 3.0], [4.0, 6.0]]);
+        let matrix_singular = Matrix::from([[2.0, 3.0], [4.0, 6.0]]);
         assert_eq!(matrix_singular.inverse(), None);
     }
 }
