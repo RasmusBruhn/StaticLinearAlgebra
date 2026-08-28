@@ -1,12 +1,12 @@
 //! Implementation and all methods on column vectors
 
 use super::VectorRow;
-use itertools::Itertools;
 use num::{
     traits::{Num, Zero},
     Complex,
 };
 use std::{
+    array,
     convert::{From, Into},
     fmt::Debug,
     iter::Sum,
@@ -74,12 +74,7 @@ where
     where
         F: Fn(T) -> T,
     {
-        let values = self
-            .values
-            .iter()
-            .map(|&value| f(value))
-            .collect_array()
-            .expect("Should not happen");
+        let values = array::from_fn(|i| f(self.values[i]));
 
         return Self { values };
     }
@@ -119,13 +114,7 @@ where
     where
         F: Fn(T, T) -> T,
     {
-        let values = self
-            .values
-            .iter()
-            .zip(rhs.get_values().iter())
-            .map(|(&a, &b)| f(a, b))
-            .collect_array()
-            .expect("Should not happen");
+        let values = array::from_fn(|i| f(self.values[i], rhs.values[i]));
 
         return Self { values };
     }
@@ -188,12 +177,7 @@ where
     /// assert_eq!(&[Complex::new(1, 0), Complex::new(0, -2)], y.get_values())
     /// ```
     pub fn hermitian_conjugate(&self) -> VectorRow<Complex<T>, S> {
-        let values = self
-            .values
-            .iter()
-            .map(|value| value.conj())
-            .collect_array()
-            .expect("Should not happen");
+        let values = self.values.map(|x| x.conj());
 
         return VectorRow { values };
     }
@@ -331,7 +315,7 @@ where
     ///
     /// assert!(x.is_zero());
     /// ```
-    /// 
+    ///
     /// ```
     /// use num::traits::identities::Zero;
     ///
@@ -430,13 +414,7 @@ where
     /// assert_eq!(&[3, 30], z.get_values());
     /// ```
     fn add(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
-        let values = self
-            .values
-            .iter()
-            .zip(rhs.values.iter())
-            .map(|(&a, &b)| a + b)
-            .collect_array()
-            .expect("Should not happen");
+        let values = array::from_fn(|i| self.values[i] + rhs.values[i]);
 
         return Self::Output { values };
     }
@@ -589,13 +567,7 @@ where
     /// assert_eq!(&[2, 20], z.get_values());
     /// ```
     fn sub(self, rhs: &VectorColumn<TR, S>) -> Self::Output {
-        let values = self
-            .values
-            .iter()
-            .zip(rhs.values.iter())
-            .map(|(&a, &b)| a - b)
-            .collect_array()
-            .expect("Should not happen");
+        let values = array::from_fn(|i| self.values[i] - rhs.values[i]);
 
         return Self::Output { values };
     }
@@ -909,12 +881,7 @@ where
     /// assert_eq!(&[2, 20], z.get_values());
     /// ```
     fn mul(self, rhs: TR) -> Self::Output {
-        let values = self
-            .values
-            .iter()
-            .map(|&v| v * rhs)
-            .collect_array()
-            .expect("Should not happen");
+        let values = self.values.map(|a| a * rhs);
 
         return Self::Output { values };
     }
